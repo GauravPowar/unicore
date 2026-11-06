@@ -1,5 +1,5 @@
 // ============================================================
-// ShodhConnect – Validation Utilities
+// UniCore – Validation Utilities
 // ============================================================
 
 /** Indian academic / research email domains */
@@ -53,3 +53,4 @@ export function truncateWords(text: string, maxWords: number): string {
 export function wordCount(text: string): number {
   return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
 }
+

@@ -1,5 +1,5 @@
 -- =============================================================
--- ShodhConnect – Seed Data
+-- UniCore – Seed Data
 -- Run AFTER 001_initial_schema.sql
 -- =============================================================
 
@@ -173,3 +173,4 @@ INSERT INTO public.comments (id, post_id, author_id, parent_comment_id, content_
    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
    NULL,
    E'Dr. Rajan, would you be willing to review a first-time CRG application from a faculty member at a Tier-3 institution? This kind of mentorship is rare and genuinely needed.');
+

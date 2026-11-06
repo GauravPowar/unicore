@@ -4,8 +4,7 @@
 // PostCard is a Client Component — handles date rendering.
 // ============================================================
 import { mockData } from '@/lib/mock-data';
-import { PostCard } from '@/components/feed/PostCard';
-import { FeedComposerStub } from '@/components/feed/FeedComposerStub';
+import { FeedClient } from '@/components/feed/FeedClient';
 import { Rss } from 'lucide-react';
 import type { Metadata } from 'next';
 
@@ -25,15 +24,7 @@ export default function HomePage() {
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Research Feed</h1>
       </div>
 
-      {/* Composer stub (full composer built in Step 3) */}
-      <FeedComposerStub />
-
-      {/* Posts */}
-      <div className="space-y-4">
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
-      </div>
+      <FeedClient initialPosts={posts} />
     </div>
   );
 }

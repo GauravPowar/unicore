@@ -1,4 +1,4 @@
-# ShodhConnect 🔬
+# UniCore 🔬
 
 **An interdisciplinary researcher network connecting scientists and academics across India.**
 
@@ -30,8 +30,8 @@
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/shodhconnect.git
-cd shodhconnect
+git clone https://github.com/your-username/unicore.git
+cd unicore
 npm install
 ```
 
@@ -70,7 +70,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ## 🏗️ Project Structure
 
 ```
-shodhconnect/
+unicore/
 ├── src/
 │   ├── app/                        # Next.js App Router pages
 │   │   ├── (auth)/                 # Login / signup route group
@@ -196,4 +196,4 @@ supabase
 
 ## 📄 License
 
-MIT © ShodhConnect Contributors
+MIT © UniCore Contributors

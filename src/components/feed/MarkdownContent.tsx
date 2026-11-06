@@ -16,7 +16,7 @@ interface MarkdownContentProps {
 
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
   return (
-    <div className={`prose-shodhconnect text-sm leading-relaxed ${className ?? ''}`}>
+    <div className={`prose-unicore text-sm leading-relaxed ${className ?? ''}`}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
         rehypePlugins={[rehypeKatex]}
@@ -43,3 +43,4 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
     </div>
   );
 }
+

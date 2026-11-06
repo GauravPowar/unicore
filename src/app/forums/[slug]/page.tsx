@@ -1,13 +1,12 @@
 // ============================================================
 // /forums/[slug] – Forum page (Server Component)
-// With cacheComponents: data is dynamic by default; no need for force-dynamic.
-// PostCard is a Client Component — handles date rendering client-side.
+// With cacheComponents: data is dynamic by default.
+// PostCard is a Client Component — handles date rendering.
 // ============================================================
 import { notFound } from 'next/navigation';
 import { mockData } from '@/lib/mock-data';
-import { PostCard } from '@/components/feed/PostCard';
+import { FeedClient } from '@/components/feed/FeedClient';
 import { Badge } from '@/components/ui/Badge';
-import { FeedComposerStub } from '@/components/feed/FeedComposerStub';
 import type { Metadata } from 'next';
 
 interface ForumPageProps {
@@ -42,23 +41,22 @@ export default async function ForumPage({ params }: ForumPageProps) {
         )}
       </div>
 
-      {/* Composer stub */}
-      <FeedComposerStub />
-
-      {/* Posts */}
+      {/* Feed with composer pre-set to this forum */}
       {posts.length === 0 ? (
-        <div className="text-center py-16 text-slate-400 dark:text-slate-500">
-          <p className="text-lg mb-1">No posts yet in this forum.</p>
-          <p className="text-sm">Be the first to start a discussion!</p>
+        <div className="space-y-4">
+          <FeedClient initialPosts={[]} defaultForumId={forum.id} />
+          <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+            <p className="text-sm">Be the first to start a discussion in this forum!</p>
+          </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </div>
+        <FeedClient initialPosts={posts} defaultForumId={forum.id} />
       )}
     </div>
   );
 }
 
+// Pre-render known forum slugs
+export async function generateStaticParams() {
+  return mockData.getForums().map((f) => ({ slug: f.slug }));
+}

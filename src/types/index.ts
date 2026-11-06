@@ -1,5 +1,5 @@
 // ============================================================
-// ShodhConnect – Shared TypeScript Types
+// UniCore – Shared TypeScript Types
 // Mirrors the PostgreSQL schema in supabase/migrations/001_initial_schema.sql
 // ============================================================
 
@@ -105,3 +105,4 @@ export interface DirectoryFilters {
   skill_offered: string;
   skill_needed: string;
 }
+

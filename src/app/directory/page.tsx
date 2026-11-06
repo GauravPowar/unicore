@@ -14,3 +14,4 @@ export default function DirectoryPage() {
   const profiles = mockData.getProfiles();
   return <DirectoryClient profiles={profiles} />;
 }
+

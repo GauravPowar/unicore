@@ -1,5 +1,5 @@
 // ============================================================
-// Root Layout — ShodhConnect App Router
+// Root Layout — UniCore App Router
 // ============================================================
 import type { Metadata } from 'next';
 import './globals.css';
@@ -8,8 +8,8 @@ import { AppShell } from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: {
-    default: 'ShodhConnect',
-    template: '%s | ShodhConnect',
+    default: 'UniCore',
+    template: '%s | UniCore',
   },
   description:
     'The interdisciplinary researcher network connecting scientists and academics across India.',

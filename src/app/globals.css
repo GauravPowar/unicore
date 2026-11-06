@@ -47,63 +47,63 @@
 }
 
 /* Prose styling for Markdown content */
-.prose-shodhconnect {
+.prose-unicore {
   @apply text-slate-800 dark:text-slate-200;
 }
 
-.prose-shodhconnect h2 {
+.prose-unicore h2 {
   @apply text-xl font-semibold mt-5 mb-2 text-slate-900 dark:text-white;
 }
 
-.prose-shodhconnect h3 {
+.prose-unicore h3 {
   @apply text-base font-semibold mt-4 mb-1 text-slate-800 dark:text-slate-100;
 }
 
-.prose-shodhconnect p {
+.prose-unicore p {
   @apply mb-3 leading-relaxed;
 }
 
-.prose-shodhconnect ul, .prose-shodhconnect ol {
+.prose-unicore ul, .prose-unicore ol {
   @apply mb-3 pl-5;
 }
 
-.prose-shodhconnect li {
+.prose-unicore li {
   @apply mb-1;
 }
 
-.prose-shodhconnect ul {
+.prose-unicore ul {
   @apply list-disc;
 }
 
-.prose-shodhconnect ol {
+.prose-unicore ol {
   @apply list-decimal;
 }
 
-.prose-shodhconnect code {
+.prose-unicore code {
   @apply bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400 px-1 py-0.5 rounded text-sm font-mono;
 }
 
-.prose-shodhconnect pre {
+.prose-unicore pre {
   @apply bg-slate-900 dark:bg-slate-950 text-slate-100 p-4 rounded-lg overflow-x-auto text-sm mb-3;
 }
 
-.prose-shodhconnect pre code {
+.prose-unicore pre code {
   @apply bg-transparent text-inherit px-0 py-0;
 }
 
-.prose-shodhconnect blockquote {
+.prose-unicore blockquote {
   @apply border-l-4 border-brand-400 pl-4 italic text-slate-600 dark:text-slate-400 my-3;
 }
 
-.prose-shodhconnect strong {
+.prose-unicore strong {
   @apply font-semibold text-slate-900 dark:text-white;
 }
 
-.prose-shodhconnect em {
+.prose-unicore em {
   @apply italic;
 }
 
-.prose-shodhconnect a {
+.prose-unicore a {
   @apply text-brand-600 dark:text-brand-400 underline underline-offset-2;
 }
 

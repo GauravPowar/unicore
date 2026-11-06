@@ -70,8 +70,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <AtSign className="w-4 h-4 text-white" />
           </div>
           <div>
-            <span className="font-bold text-slate-900 dark:text-white text-lg">Shodh</span>
-            <span className="font-bold text-brand-500 text-lg">Connect</span>
+            <span className="font-bold text-slate-900 dark:text-white text-lg">Uni</span>
+            <span className="font-bold text-brand-500 text-lg">Core</span>
           </div>
           <button
             className="ml-auto lg:hidden text-slate-500"
@@ -149,7 +149,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <span className="font-bold text-slate-900 dark:text-white">ShodhConnect</span>
+          <span className="font-bold text-slate-900 dark:text-white">UniCore</span>
           <div className="ml-auto">
             <ThemeToggle />
           </div>
@@ -162,3 +162,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

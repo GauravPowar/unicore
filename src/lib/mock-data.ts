@@ -1,5 +1,5 @@
 // ============================================================
-// ShodhConnect – Mock Data Provider
+// UniCore – Mock Data Provider
 // Used when NEXT_PUBLIC_USE_MOCK_DATA=true or Supabase keys are absent.
 // Provides realistic Indian researcher data for UI development/preview.
 // ============================================================
@@ -370,3 +370,4 @@ export function useMockData(): boolean {
   // Use mock if flag is explicitly "true" OR if Supabase URL is missing
   return flag === 'true' || !url || url.includes('your-project-id');
 }
+

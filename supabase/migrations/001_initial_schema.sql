@@ -1,5 +1,5 @@
 -- =============================================================
--- ShodhConnect – Initial Database Schema
+-- UniCore – Initial Database Schema
 -- Migration: 001_initial_schema.sql
 -- =============================================================
 
@@ -307,3 +307,4 @@ CREATE POLICY "upvotes_delete_own"
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.posts;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.comments;
+

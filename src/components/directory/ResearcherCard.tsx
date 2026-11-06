@@ -129,3 +129,4 @@ export function ResearcherCard({ profile }: ResearcherCardProps) {
     </div>
   );
 }
+

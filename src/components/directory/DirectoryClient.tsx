@@ -210,3 +210,4 @@ export function DirectoryClient({ profiles }: DirectoryClientProps) {
     </div>
   );
 }
+
