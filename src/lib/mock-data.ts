@@ -364,10 +364,13 @@ export const mockData = {
 };
 
 /** Returns true if the app should use mock data instead of live Supabase. */
-export function useMockData(): boolean {
+export function isUsingMockData(): boolean {
   const flag = process.env.NEXT_PUBLIC_USE_MOCK_DATA;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   // Use mock if flag is explicitly "true" OR if Supabase URL is missing
   return flag === 'true' || !url || url.includes('your-project-id');
 }
+
+// Deprecated alias for backwards compatibility
+export const useMockData = isUsingMockData;
 

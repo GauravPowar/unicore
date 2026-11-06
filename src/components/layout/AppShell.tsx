@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { ShareModal } from '@/components/ui/ShareModal';
 import { Avatar } from '@/components/ui/Avatar';
 import { MOCK_FORUMS, MOCK_PROFILES } from '@/lib/mock-data';
 
@@ -178,16 +179,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ── Main Content ──────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile topbar */}
-        <header className="sticky top-0 z-10 lg:hidden flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <span className="font-bold text-slate-900 dark:text-white">UniCore</span>
-          <div className="ml-auto">
+        {/* Topbar (visible on all screens) */}
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-2.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 dark:text-white text-sm lg:hidden">
+                UniCore
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-200/50 dark:border-brand-800/40">
+                🇮🇳 Indian Academic Beta
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ShareModal />
             <ThemeToggle />
           </div>
         </header>

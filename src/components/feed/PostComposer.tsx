@@ -10,6 +10,7 @@ import { MarkdownContent } from '@/components/feed/MarkdownContent';
 import { wordCount } from '@/lib/validators';
 import { POST_TYPE_CONFIG } from '@/lib/utils';
 import { MOCK_FORUMS } from '@/lib/mock-data';
+import { uploadPostMedia } from '@/lib/supabase/storage';
 import type { PostType } from '@/types';
 import {
   Eye,
@@ -57,10 +58,11 @@ export function PostComposer({ onPost, defaultForumId }: PostComposerProps) {
 
     setIsUploading(true);
     try {
-      // In production: upload to Supabase Storage and return public URL.
-      // For mock mode: create an object URL for preview.
-      const urls = imageFiles.map((file) => URL.createObjectURL(file));
+      const uploadPromises = imageFiles.map((file) => uploadPostMedia(file));
+      const urls = await Promise.all(uploadPromises);
       setMediaUrls((prev) => [...prev, ...urls]);
+    } catch (err) {
+      console.error('Failed to upload media:', err);
     } finally {
       setIsUploading(false);
     }
