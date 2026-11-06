@@ -23,7 +23,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { MOCK_FORUMS } from '@/lib/mock-data';
+import { Avatar } from '@/components/ui/Avatar';
+import { MOCK_FORUMS, MOCK_PROFILES } from '@/lib/mock-data';
+
+const currentUser = MOCK_PROFILES[0]; // Dr. Priya Subramaniam
 
 const PRIMARY_NAV = [
   { href: '/', label: 'Feed', icon: Home },
@@ -128,6 +131,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          {/* Active Researcher Profile Card */}
+          <div className="pt-3 pb-1 px-3">
+            <Link
+              href={`/profile/${currentUser.id}`}
+              onClick={() => setSidebarOpen(false)}
+              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200/60 dark:border-slate-700/50"
+            >
+              <Avatar name={currentUser.full_name} src={currentUser.avatar_url} size="sm" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  {currentUser.full_name}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate">
+                  {currentUser.institution}
+                </p>
+              </div>
+            </Link>
+
+            <div className="flex justify-between items-center px-1 pt-2 text-[11px]">
+              <Link
+                href="/login"
+                className="text-slate-500 hover:text-brand-500 transition-colors"
+              >
+                Sign In
+              </Link>
+              <span className="text-slate-300 dark:text-slate-700">·</span>
+              <Link
+                href="/signup"
+                className="text-brand-600 dark:text-brand-400 font-medium hover:underline"
+              >
+                Join Network
+              </Link>
+            </div>
+          </div>
         </nav>
 
         {/* Footer */}

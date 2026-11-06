@@ -6,7 +6,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge, VerifiedBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { COLLAB_STATUS_LABELS } from '@/lib/utils';
-import { MapPin, MessageSquare, ExternalLink, Sparkles } from 'lucide-react';
+import { MapPin, ExternalLink, Sparkles } from 'lucide-react';
 import type { Profile } from '@/types';
 
 interface ResearcherCardProps {
@@ -138,12 +138,11 @@ export function ResearcherCard({ profile }: ResearcherCardProps) {
           </Button>
         </Link>
         <Link
-          href={`/messages?to=${profile.id}`}
+          href={`/profile/${profile.id}`}
           className="flex-1"
         >
           <Button variant="secondary" size="sm" className="w-full gap-1.5 text-xs">
-            <MessageSquare className="w-3.5 h-3.5" />
-            Direct Message
+            View Profile
           </Button>
         </Link>
       </div>
