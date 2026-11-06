@@ -86,10 +86,16 @@ export default function SignupPage() {
     // Real Supabase Auth Registration
     try {
       const supabase = createClient();
+      const redirectOrigin =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}`
+          : 'https://unicore-five.vercel.app';
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
+          emailRedirectTo: `${redirectOrigin}/`,
           data: {
             full_name: fullName.trim(),
             institution: institution.trim() || null,
