@@ -1,5 +1,5 @@
 // ============================================================
-// /login – UniCore Researcher Login
+// /login – UniCore Real & Mock Researcher Login
 // ============================================================
 'use client';
 
@@ -7,31 +7,65 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { AtSign, Lock, Mail, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { isUsingMockData } from '@/lib/mock-data';
 import { isIndianAcademicEmail } from '@/lib/validators';
+import {
+  AtSign,
+  Lock,
+  Mail,
+  ArrowRight,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [demoSuccess, setDemoSuccess] = useState(false);
 
   const isAcademic = isIndianAcademicEmail(email);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     if (!email || !password) return;
 
     setIsLoading(true);
-    // In mock mode: simulate successful authentication
-    setTimeout(() => {
+
+    if (isUsingMockData()) {
+      setTimeout(() => {
+        setIsLoading(false);
+        setDemoSuccess(true);
+        setTimeout(() => router.push('/'), 800);
+      }, 500);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(false);
       setDemoSuccess(true);
-      setTimeout(() => {
-        router.push('/');
-      }, 1000);
-    }, 600);
+      setTimeout(() => router.push('/'), 800);
+    } catch {
+      setErrorMessage('Login failed. Please check your credentials or network.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,19 +84,26 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {errorMessage && (
+          <div className="mb-4 flex items-start gap-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-3 rounded-xl text-red-700 dark:text-red-300 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         {demoSuccess ? (
           <div className="py-8 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
               Authenticated successfully!
             </p>
-            <p className="text-xs text-slate-400">Redirecting to your feed...</p>
+            <p className="text-xs text-slate-400">Loading your feed...</p>
           </div>
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Institutional or Personal Email
+                Email Address
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -80,7 +121,7 @@ export default function LoginPage() {
               {isAcademic && (
                 <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1.5 rounded-md border border-emerald-200 dark:border-emerald-800/60">
                   <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                  <span>Indian Academic Domain detected — Verified Researcher</span>
+                  <span>Verified Researcher Institutional Domain</span>
                 </div>
               )}
             </div>
@@ -90,9 +131,6 @@ export default function LoginPage() {
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Password
                 </label>
-                <a href="#" className="text-xs text-brand-600 dark:text-brand-400 hover:underline">
-                  Forgot?
-                </a>
               </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -134,4 +172,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

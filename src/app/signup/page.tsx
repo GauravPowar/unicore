@@ -1,6 +1,5 @@
 // ============================================================
-// /signup – UniCore Researcher Registration
-// Includes Institutional Email & ORCID verification flow
+// /signup – UniCore Real & Mock Researcher Registration
 // ============================================================
 'use client';
 
@@ -10,6 +9,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { VerifiedBadge } from '@/components/ui/Badge';
 import { isIndianAcademicEmail, isValidOrcidId } from '@/lib/validators';
+import { createClient } from '@/lib/supabase/client';
+import { isUsingMockData } from '@/lib/mock-data';
 import {
   AtSign,
   Mail,
@@ -20,6 +21,7 @@ import {
   Sparkles,
   ExternalLink,
   ArrowRight,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function SignupPage() {
@@ -34,23 +36,85 @@ export default function SignupPage() {
   const [collabStatus, setCollabStatus] = useState('open_to_collab');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isFetchingOrcid, setIsFetchingOrcid] = useState(false);
+  const [orcidSuccess, setOrcidSuccess] = useState(false);
 
   const isAcademic = isIndianAcademicEmail(email);
   const hasValidOrcid = orcidId.trim().length > 0 ? isValidOrcidId(orcidId.trim()) : true;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFetchOrcid = async () => {
+    if (!isValidOrcidId(orcidId.trim())) return;
+    setIsFetchingOrcid(true);
+    setOrcidSuccess(false);
+    try {
+      const res = await fetch(`/api/orcid/${orcidId.trim()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.full_name) {
+          setFullName(data.full_name);
+          setOrcidSuccess(true);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsFetchingOrcid(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     if (!fullName || !email || !password) return;
 
     setIsLoading(true);
-    setTimeout(() => {
+
+    if (isUsingMockData()) {
+      setTimeout(() => {
+        setIsLoading(false);
+        setIsSuccess(true);
+        setTimeout(() => router.push('/'), 1200);
+      }, 700);
+      return;
+    }
+
+    // Real Supabase Auth Registration
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            institution: institution.trim() || null,
+            department: department.trim() || null,
+            orcid_id: orcidId.trim() || null,
+            collab_status: collabStatus,
+          },
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(false);
       setIsSuccess(true);
-      setTimeout(() => {
-        router.push('/');
-      }, 1500);
-    }, 800);
+
+      // If session established or confirmation required
+      if (data?.session) {
+        setTimeout(() => router.push('/'), 1200);
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('Registration error. Please check your network or try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -65,23 +129,32 @@ export default function SignupPage() {
             Join the <span className="text-brand-500">UniCore</span> Network
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Connect across disciplines, find co-authors, and share lab insights
+            Connect across Indian universities &amp; labs, find co-authors, and share experiments
           </p>
         </div>
+
+        {errorMessage && (
+          <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-3 rounded-xl text-red-700 dark:text-red-300 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {isSuccess ? (
           <div className="py-10 text-center space-y-3">
             <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto animate-bounce" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Registration Successful!
+              Account Created!
             </h2>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
               {isAcademic
-                ? 'Your institutional email has been recognized. You have been assigned the Verified Researcher badge.'
-                : 'Welcome aboard! You can start exploring forums and the researcher directory.'}
+                ? 'Your institutional email has been recognized! You have been granted the Verified Researcher badge.'
+                : 'Welcome aboard! Your researcher profile is active.'}
             </p>
             <div className="pt-2">
-              <span className="text-xs text-brand-500 animate-pulse">Redirecting to your feed...</span>
+              <span className="text-xs text-brand-500 animate-pulse">
+                Redirecting to feed...
+              </span>
             </div>
           </div>
         ) : (
@@ -136,7 +209,7 @@ export default function SignupPage() {
                         Institutional Email Detected!
                       </p>
                       <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                        You will automatically receive the verification badge upon signup.
+                        Auto-assigned the Verified Researcher badge upon signup.
                       </p>
                     </div>
                   </div>
@@ -159,7 +232,7 @@ export default function SignupPage() {
                   <Building className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="IISc Bengaluru, IIT Bombay, etc."
+                    placeholder="IISc, IIT Bombay, TIFR..."
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
                     className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3.5 py-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -181,7 +254,7 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* ORCID iD with format validation */}
+            {/* ORCID iD with Auto-fill */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -196,13 +269,35 @@ export default function SignupPage() {
                   What is ORCID? <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               </div>
-              <input
-                type="text"
-                placeholder="0000-0002-1825-0097"
-                value={orcidId}
-                onChange={(e) => setOrcidId(e.target.value)}
-                className="w-full text-sm font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3.5 py-2 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="0000-0002-1825-0097"
+                  value={orcidId}
+                  onChange={(e) => {
+                    setOrcidId(e.target.value);
+                    setOrcidSuccess(false);
+                  }}
+                  className="flex-1 text-sm font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3.5 py-2 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!isValidOrcidId(orcidId.trim()) || isFetchingOrcid}
+                  onClick={handleFetchOrcid}
+                  isLoading={isFetchingOrcid}
+                  className="text-xs shrink-0"
+                >
+                  Verify ORCID
+                </Button>
+              </div>
+              {orcidSuccess && (
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Verified public record. Name automatically filled!
+                </p>
+              )}
               {orcidId.trim().length > 0 && !hasValidOrcid && (
                 <p className="text-[11px] text-red-500 mt-1">
                   Format must be 16 digits: 0000-0000-0000-0000
@@ -237,7 +332,8 @@ export default function SignupPage() {
                 <input
                   type="password"
                   required
-                  placeholder="At least 8 characters"
+                  minLength={6}
+                  placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3.5 py-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -253,7 +349,7 @@ export default function SignupPage() {
               disabled={!hasValidOrcid}
               className="w-full gap-2 mt-4"
             >
-              Register Account <ArrowRight className="w-4 h-4" />
+              Register &amp; Onboard <ArrowRight className="w-4 h-4" />
             </Button>
 
             <div className="text-center pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -273,4 +369,3 @@ export default function SignupPage() {
     </div>
   );
 }
-

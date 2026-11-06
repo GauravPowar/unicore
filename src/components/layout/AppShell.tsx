@@ -25,9 +25,8 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ShareModal } from '@/components/ui/ShareModal';
 import { Avatar } from '@/components/ui/Avatar';
-import { MOCK_FORUMS, MOCK_PROFILES } from '@/lib/mock-data';
-
-const currentUser = MOCK_PROFILES[0]; // Dr. Priya Subramaniam
+import { useAuth } from '@/components/providers/AuthProvider';
+import { MOCK_FORUMS } from '@/lib/mock-data';
 
 const PRIMARY_NAV = [
   { href: '/', label: 'Feed', icon: Home },
@@ -47,6 +46,8 @@ const FORUM_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { profile, signOut } = useAuth();
+  const currentUser = profile;
 
   return (
     <div className="flex min-h-screen">
@@ -134,37 +135,66 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
           {/* Active Researcher Profile Card */}
           <div className="pt-3 pb-1 px-3">
-            <Link
-              href={`/profile/${currentUser.id}`}
-              onClick={() => setSidebarOpen(false)}
-              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200/60 dark:border-slate-700/50"
-            >
-              <Avatar name={currentUser.full_name} src={currentUser.avatar_url} size="sm" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                  {currentUser.full_name}
-                </p>
-                <p className="text-[10px] text-slate-400 truncate">
-                  {currentUser.institution}
-                </p>
-              </div>
-            </Link>
+            {currentUser ? (
+              <div className="space-y-2">
+                <Link
+                  href={`/profile/${currentUser.id}`}
+                  onClick={() => setSidebarOpen(false)}
+                  className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200/60 dark:border-slate-700/50"
+                >
+                  <Avatar name={currentUser.full_name} src={currentUser.avatar_url} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        {currentUser.full_name}
+                      </p>
+                      {currentUser.is_verified_researcher && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Verified Researcher" />
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate">
+                      {currentUser.institution || 'UniCore Researcher'}
+                    </p>
+                  </div>
+                </Link>
 
-            <div className="flex justify-between items-center px-1 pt-2 text-[11px]">
-              <Link
-                href="/login"
-                className="text-slate-500 hover:text-brand-500 transition-colors"
-              >
-                Sign In
-              </Link>
-              <span className="text-slate-300 dark:text-slate-700">·</span>
-              <Link
-                href="/signup"
-                className="text-brand-600 dark:text-brand-400 font-medium hover:underline"
-              >
-                Join Network
-              </Link>
-            </div>
+                <div className="flex justify-between items-center px-1 text-[11px]">
+                  <Link
+                    href={`/profile/${currentUser.id}`}
+                    className="text-brand-600 dark:text-brand-400 font-medium hover:underline"
+                  >
+                    View Profile
+                  </Link>
+                  <span className="text-slate-300 dark:text-slate-700">·</span>
+                  <button
+                    onClick={() => signOut()}
+                    className="text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50 text-center space-y-2">
+                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Join the Network
+                </p>
+                <div className="flex gap-2 justify-center text-xs">
+                  <Link
+                    href="/login"
+                    className="px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="px-3 py-1 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600"
+                  >
+                    Register
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </nav>
 
