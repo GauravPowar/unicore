@@ -1,11 +1,12 @@
 // ============================================================
 // ResearcherCard – directory grid card
 // ============================================================
+import Link from 'next/link';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, VerifiedBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { COLLAB_STATUS_LABELS } from '@/lib/utils';
-import { MapPin, MessageSquare, ExternalLink } from 'lucide-react';
+import { MapPin, MessageSquare, ExternalLink, Sparkles } from 'lucide-react';
 import type { Profile } from '@/types';
 
 interface ResearcherCardProps {
@@ -21,46 +22,49 @@ const COLLAB_STATUS_COLORS: Record<string, string> = {
 
 export function ResearcherCard({ profile }: ResearcherCardProps) {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col gap-3 hover:border-brand-300 dark:hover:border-brand-700 transition-colors">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col gap-3.5 hover:border-brand-300 dark:hover:border-brand-700 transition-all shadow-xs">
       {/* Top row */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3.5">
         <Avatar name={profile.full_name} src={profile.avatar_url} size="lg" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="font-semibold text-slate-900 dark:text-white text-sm">
+            <span className="font-semibold text-slate-900 dark:text-white text-base">
               {profile.full_name}
             </span>
             {profile.is_verified_researcher && <VerifiedBadge />}
           </div>
           {profile.institution && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mt-0.5 truncate">
               {profile.institution}
             </p>
           )}
           {profile.department && (
-            <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
               {profile.department}
             </p>
           )}
           {profile.city_state && (
-            <p className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
-              <MapPin className="w-3 h-3" />
+            <p className="flex items-center gap-1 text-[11px] text-slate-400 mt-1">
+              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
               {profile.city_state}
             </p>
           )}
         </div>
       </div>
 
-      {/* Collab status */}
-      <span
-        className={`inline-flex self-start items-center px-2 py-0.5 rounded-full text-xs font-medium ${COLLAB_STATUS_COLORS[profile.collab_status]}`}
-      >
-        {COLLAB_STATUS_LABELS[profile.collab_status]}
-      </span>
+      {/* Collab status badge */}
+      <div>
+        <span
+          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${COLLAB_STATUS_COLORS[profile.collab_status]}`}
+        >
+          <Sparkles className="w-3 h-3" />
+          {COLLAB_STATUS_LABELS[profile.collab_status]}
+        </span>
+      </div>
 
       {/* Bio */}
       {profile.bio && (
-        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">
+        <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
           {profile.bio}
         </p>
       )}
@@ -68,15 +72,17 @@ export function ResearcherCard({ profile }: ResearcherCardProps) {
       {/* Skills offered */}
       {profile.skills_offered.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Offers</p>
-          <div className="flex flex-wrap gap-1">
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1.5">
+            Skills Offered
+          </p>
+          <div className="flex flex-wrap gap-1.5">
             {profile.skills_offered.slice(0, 4).map((skill) => (
-              <Badge key={skill} variant="verified" className="text-xs">
+              <Badge key={skill} variant="verified" className="text-[11px]">
                 {skill}
               </Badge>
             ))}
             {profile.skills_offered.length > 4 && (
-              <Badge variant="default" className="text-xs">
+              <Badge variant="default" className="text-[11px]">
                 +{profile.skills_offered.length - 4} more
               </Badge>
             )}
@@ -87,15 +93,17 @@ export function ResearcherCard({ profile }: ResearcherCardProps) {
       {/* Skills needed */}
       {profile.skills_needed.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Needs</p>
-          <div className="flex flex-wrap gap-1">
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1.5">
+            Looking For / Needs
+          </p>
+          <div className="flex flex-wrap gap-1.5">
             {profile.skills_needed.slice(0, 4).map((skill) => (
-              <Badge key={skill} variant="collab" className="text-xs">
+              <Badge key={skill} variant="collab" className="text-[11px]">
                 {skill}
               </Badge>
             ))}
             {profile.skills_needed.length > 4 && (
-              <Badge variant="default" className="text-xs">
+              <Badge variant="default" className="text-[11px]">
                 +{profile.skills_needed.length - 4} more
               </Badge>
             )}
@@ -103,30 +111,42 @@ export function ResearcherCard({ profile }: ResearcherCardProps) {
         </div>
       )}
 
-      {/* ORCID */}
+      {/* ORCID badge & link */}
       {profile.orcid_id && (
-        <a
-          href={`https://orcid.org/${profile.orcid_id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 hover:underline"
-        >
-          <ExternalLink className="w-3 h-3" />
-          ORCID: {profile.orcid_id}
-        </a>
+        <div className="pt-1">
+          <a
+            href={`https://orcid.org/${profile.orcid_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400 hover:underline font-mono bg-brand-50/50 dark:bg-brand-900/20 px-2 py-1 rounded"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            ORCID: {profile.orcid_id}
+            <ExternalLink className="w-3 h-3 ml-0.5 opacity-70" />
+          </a>
+        </div>
       )}
 
       {/* Actions */}
-      <div className="flex gap-2 mt-auto pt-2 border-t border-slate-100 dark:border-slate-800">
-        <Button variant="primary" size="sm" className="flex-1 gap-1.5">
-          <MessageSquare className="w-3.5 h-3.5" />
-          Coffee Chat
-        </Button>
-        <Button variant="secondary" size="sm" className="flex-1">
-          View Profile
-        </Button>
+      <div className="flex gap-2 mt-auto pt-3 border-t border-slate-100 dark:border-slate-800">
+        <Link
+          href={`/messages?to=${profile.id}&preset=coffee_chat`}
+          className="flex-1"
+        >
+          <Button variant="primary" size="sm" className="w-full gap-1.5 text-xs">
+            ☕ Request Coffee Chat
+          </Button>
+        </Link>
+        <Link
+          href={`/messages?to=${profile.id}`}
+          className="flex-1"
+        >
+          <Button variant="secondary" size="sm" className="w-full gap-1.5 text-xs">
+            <MessageSquare className="w-3.5 h-3.5" />
+            Direct Message
+          </Button>
+        </Link>
       </div>
     </div>
   );
 }
-

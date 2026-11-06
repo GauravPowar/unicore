@@ -23,6 +23,17 @@ export function formatDate(iso: string): string {
   });
 }
 
+/** Safe unique client ID generator (avoids impure calls during render) */
+let clientIdSeq = 2000;
+export function createClientId(prefix = 'id'): string {
+  clientIdSeq += 1;
+  return `${prefix}-${clientIdSeq}`;
+}
+
+export function getCurrentIsoTime(): string {
+  return new Date().toISOString();
+}
+
 /**
  * Formats an ISO date into a relative string ("2h ago").
  * ONLY call this on the client (uses new Date() for now).

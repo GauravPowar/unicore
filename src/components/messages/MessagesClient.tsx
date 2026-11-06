@@ -1,95 +1,183 @@
 // ============================================================
-// MessagesClient – 1-on-1 DM UI with Supabase Realtime stub
-// Full Realtime integration in Step 4
+// MessagesClient – 1-on-1 Realtime DM UI
+// Supports ?to=userId & preset=coffee_chat query params
 // ============================================================
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { VerifiedBadge } from '@/components/ui/Badge';
 import { MOCK_MESSAGES, MOCK_PROFILES } from '@/lib/mock-data';
-import { formatRelativeDate, cn } from '@/lib/utils';
-import { Send, MessageSquare } from 'lucide-react';
-import type { Profile } from '@/types';
+import { formatRelativeDate, createClientId, cn } from '@/lib/utils';
+import { Send, MessageSquare, Coffee, CheckCheck } from 'lucide-react';
+import type { Message } from '@/types';
 
 export function MessagesClient() {
-  const currentUserId = MOCK_PROFILES[0].id; // Simulated logged-in user
-  const [activeConversation, setActiveConversation] = useState<Profile | null>(null);
-  const [inputValue, setInputValue] = useState('');
+  const searchParams = useSearchParams();
+  const toUserId = searchParams.get('to');
+  const preset = searchParams.get('preset');
 
-  // Derive unique conversation partners
+  const currentUserId = MOCK_PROFILES[0].id; // Simulated active researcher session
+  const currentUser = MOCK_PROFILES[0];
+
+  const targetProfile = toUserId ? MOCK_PROFILES.find((p) => p.id === toUserId) : null;
+  const initialPartner = targetProfile ?? MOCK_PROFILES[1];
+
+  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>(initialPartner.id);
+
+  const initialInput =
+    preset === 'coffee_chat' && targetProfile
+      ? `Hi ${targetProfile.full_name.split(' ')[0]}! I saw your research profile on UniCore and would love to connect for a quick 15-minute virtual coffee chat to explore collaborative ideas.`
+      : '';
+
+  const [inputValue, setInputValue] = useState(initialInput);
+
+  const activeConversation =
+    MOCK_PROFILES.find((p) => p.id === selectedPartnerId) ?? initialPartner;
+
+  // Derive conversations list
   const conversations = MOCK_PROFILES.filter((p) => p.id !== currentUserId);
 
   // Messages for active conversation
   const threadMessages = activeConversation
-    ? MOCK_MESSAGES.filter(
+    ? messages.filter(
         (m) =>
           (m.sender_id === currentUserId && m.receiver_id === activeConversation.id) ||
           (m.sender_id === activeConversation.id && m.receiver_id === currentUserId)
       )
     : [];
 
+  const handleSendMessage = () => {
+    if (!inputValue.trim() || !activeConversation) return;
+
+    const newMessage: Message = {
+      id: createClientId('msg'),
+      sender_id: currentUserId,
+      receiver_id: activeConversation.id,
+      content: inputValue.trim(),
+      media_url: null,
+      is_read: false,
+      created_at: new Date().toISOString(),
+      sender: currentUser,
+      receiver: activeConversation,
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+    setInputValue('');
+  };
+
+  const handleQuickCoffeeChat = () => {
+    if (!activeConversation) return;
+    setInputValue(
+      `Hi ${activeConversation.full_name}! Would you be open to a virtual coffee chat this week to discuss research overlaps?`
+    );
+  };
+
   return (
-    <div className="h-[calc(100vh-10rem)] flex border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+    <div className="h-[calc(100vh-10rem)] min-h-[500px] flex border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
       {/* ── Sidebar: conversation list ───────────────────── */}
-      <div className="w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 flex flex-col">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+      <div className="w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-slate-50/50 dark:bg-slate-950/40">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h2 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
             <MessageSquare className="w-4 h-4 text-brand-500" />
-            Messages
+            Direct Messages
           </h2>
+          <span className="text-[11px] font-mono bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+            Realtime
+          </span>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          {conversations.map((person) => (
-            <button
-              key={person.id}
-              onClick={() => setActiveConversation(person)}
-              className={cn(
-                'w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left',
-                activeConversation?.id === person.id &&
-                  'bg-brand-50 dark:bg-brand-900/20'
-              )}
-            >
-              <Avatar name={person.full_name} src={person.avatar_url} size="sm" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                  {person.full_name}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {person.institution}
-                </p>
-              </div>
-            </button>
-          ))}
+
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+          {conversations.map((person) => {
+            const lastMsg = messages
+              .filter(
+                (m) =>
+                  (m.sender_id === currentUserId && m.receiver_id === person.id) ||
+                  (m.sender_id === person.id && m.receiver_id === currentUserId)
+              )
+              .slice(-1)[0];
+
+            const isSelected = activeConversation.id === person.id;
+
+            return (
+              <button
+                key={person.id}
+                onClick={() => setSelectedPartnerId(person.id)}
+                className={cn(
+                  'w-full flex items-start gap-3 p-3.5 hover:bg-white dark:hover:bg-slate-800/70 transition-colors text-left',
+                  isSelected &&
+                    'bg-white dark:bg-slate-800 shadow-xs border-l-2 border-brand-500'
+                )}
+              >
+                <Avatar name={person.full_name} src={person.avatar_url} size="md" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                      {person.full_name}
+                    </p>
+                    {lastMsg && (
+                      <span className="text-[10px] text-slate-400">
+                        {formatRelativeDate(lastMsg.created_at)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    {person.institution}
+                  </p>
+                  {lastMsg && (
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-1">
+                      {lastMsg.content}
+                    </p>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* ── Main: message thread ─────────────────────────── */}
       {activeConversation ? (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900">
           {/* Thread header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-            <Avatar name={activeConversation.full_name} src={activeConversation.avatar_url} size="sm" />
-            <div>
-              <p className="font-medium text-sm text-slate-900 dark:text-white">
-                {activeConversation.full_name}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {activeConversation.institution}
+          <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-200 dark:border-slate-800">
+            <Avatar
+              name={activeConversation.full_name}
+              src={activeConversation.avatar_url}
+              size="md"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="font-semibold text-sm text-slate-900 dark:text-white">
+                  {activeConversation.full_name}
+                </p>
+                {activeConversation.is_verified_researcher && <VerifiedBadge />}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                {activeConversation.institution} · {activeConversation.department}
               </p>
             </div>
-            <div className="ml-auto">
-              <Button size="sm" variant="secondary">
-                ☕ Request Coffee Chat
-              </Button>
-            </div>
+
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleQuickCoffeeChat}
+              className="gap-1.5 text-xs shrink-0"
+            >
+              <Coffee className="w-3.5 h-3.5 text-saffron-500" />
+              Coffee Chat Preset
+            </Button>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Messages display */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
             {threadMessages.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                Start the conversation with {activeConversation.full_name}!
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm gap-2">
+                <Coffee className="w-10 h-10 text-brand-400/40" />
+                <p>No messages yet. Send an opening message or pitch a collaboration!</p>
               </div>
             ) : (
               threadMessages.map((msg) => {
@@ -97,7 +185,10 @@ export function MessagesClient() {
                 return (
                   <div
                     key={msg.id}
-                    className={cn('flex gap-2', isSent ? 'flex-row-reverse' : 'flex-row')}
+                    className={cn(
+                      'flex gap-2.5 max-w-lg',
+                      isSent ? 'ml-auto flex-row-reverse' : 'mr-auto flex-row'
+                    )}
                   >
                     {!isSent && (
                       <Avatar
@@ -106,22 +197,26 @@ export function MessagesClient() {
                         size="sm"
                       />
                     )}
-                    <div className="max-w-xs space-y-1">
+                    <div className="space-y-1">
                       <div
-                        className={
-                          isSent ? 'chat-bubble-sent' : 'chat-bubble-received'
-                        }
-                      >
-                        <p className="text-sm">{msg.content}</p>
-                      </div>
-                      <p
                         className={cn(
-                          'text-xs text-slate-400',
-                          isSent ? 'text-right' : 'text-left'
+                          'p-3.5 rounded-2xl text-sm leading-relaxed shadow-xs',
+                          isSent
+                            ? 'bg-brand-500 text-white rounded-br-xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-bl-xs border border-slate-200/60 dark:border-slate-700/50'
                         )}
                       >
-                        {formatRelativeDate(msg.created_at)}
-                      </p>
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                      <div
+                        className={cn(
+                          'flex items-center gap-1 text-[10px] text-slate-400 px-1',
+                          isSent ? 'justify-end' : 'justify-start'
+                        )}
+                      >
+                        <span>{formatRelativeDate(msg.created_at)}</span>
+                        {isSent && <CheckCheck className="w-3 h-3 text-brand-500" />}
+                      </div>
                     </div>
                   </div>
                 );
@@ -129,26 +224,27 @@ export function MessagesClient() {
             )}
           </div>
 
-          {/* Input */}
-          <div className="border-t border-slate-200 dark:border-slate-800 p-3 flex gap-2">
+          {/* Input box */}
+          <div className="border-t border-slate-200 dark:border-slate-800 p-3.5 flex gap-2.5 bg-slate-50/50 dark:bg-slate-950/30">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && inputValue.trim()) {
-                  // In Step 4, this will insert into Supabase
-                  setInputValue('');
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
                 }
               }}
-              placeholder="Type a message…"
-              className="flex-1 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              placeholder={`Message ${activeConversation.full_name.split(' ')[0]}...`}
+              className="flex-1 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-xs"
             />
             <Button
               variant="primary"
-              size="sm"
+              size="md"
               disabled={!inputValue.trim()}
-              onClick={() => setInputValue('')}
+              onClick={handleSendMessage}
+              className="px-4"
             >
               <Send className="w-4 h-4" />
             </Button>
@@ -157,8 +253,8 @@ export function MessagesClient() {
       ) : (
         <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">
           <div className="text-center">
-            <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Select a conversation to start messaging</p>
+            <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30 text-brand-500" />
+            <p className="text-sm font-medium">Select a researcher to open direct messaging</p>
           </div>
         </div>
       )}
