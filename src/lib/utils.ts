@@ -9,8 +9,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Formats an ISO date string into a human-readable relative time or short date. */
+/**
+ * Formats an ISO date string into a short date string.
+ * Safe for server-side rendering — does NOT call new Date() for "now".
+ * For relative times (e.g., "2h ago"), use the client-only RelativeDate component.
+ */
 export function formatDate(iso: string): string {
+  const date = new Date(iso);
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Formats an ISO date into a relative string ("2h ago").
+ * ONLY call this on the client (uses new Date() for now).
+ */
+export function formatRelativeDate(iso: string): string {
   const date = new Date(iso);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();

@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
+  // cacheComponents + partialPrefetching are Next.js 16 features that conflict
+  // with `export const dynamic` route segment config. Using standard rendering instead.
   turbopack: {
     rules: {
       "*.css": {
