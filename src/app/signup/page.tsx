@@ -75,8 +75,11 @@ export default function SignupPage() {
       setTimeout(() => {
         setIsLoading(false);
         setIsSuccess(true);
-        setTimeout(() => router.push('/'), 1200);
-      }, 700);
+        setTimeout(() => {
+          router.push('/');
+          router.refresh();
+        }, 800);
+      }, 500);
       return;
     }
 
@@ -106,10 +109,23 @@ export default function SignupPage() {
       setIsLoading(false);
       setIsSuccess(true);
 
-      // If session established or confirmation required
-      if (data?.session) {
-        setTimeout(() => router.push('/'), 1200);
+      // Auto-login to establish session if email confirmation is disabled
+      if (!data?.session) {
+        try {
+          await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          });
+        } catch {
+          // ignore
+        }
       }
+
+      // Navigate to feed and refresh server components
+      setTimeout(() => {
+        router.push('/');
+        router.refresh();
+      }, 1000);
     } catch (err) {
       console.error(err);
       setErrorMessage('Registration error. Please check your network or try again.');
@@ -151,9 +167,14 @@ export default function SignupPage() {
                 ? 'Your institutional email has been recognized! You have been granted the Verified Researcher badge.'
                 : 'Welcome aboard! Your researcher profile is active.'}
             </p>
-            <div className="pt-2">
-              <span className="text-xs text-brand-500 animate-pulse">
-                Redirecting to feed...
+            <div className="pt-3 flex flex-col items-center gap-2">
+              <Link href="/">
+                <Button variant="primary" size="md" className="gap-1.5 text-xs">
+                  Go to Research Feed <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+              <span className="text-[11px] text-slate-400">
+                Redirecting automatically...
               </span>
             </div>
           </div>

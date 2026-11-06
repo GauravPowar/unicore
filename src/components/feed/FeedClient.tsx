@@ -1,14 +1,16 @@
 // ============================================================
-// FeedClient – client-side feed with category tabs & composer
+// FeedClient – client-side feed with category tabs & live sync
 // ============================================================
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PostComposer } from '@/components/feed/PostComposer';
 import { PostCard } from '@/components/feed/PostCard';
 import { createClientId } from '@/lib/utils';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { createClient } from '@/lib/supabase/client';
+import { isUsingMockData, MOCK_PROFILES } from '@/lib/mock-data';
 import type { Post, PostType } from '@/types';
-import { MOCK_PROFILES } from '@/lib/mock-data';
 import { Sparkles } from 'lucide-react';
 
 interface FeedClientProps {
@@ -27,8 +29,38 @@ const FILTER_TABS: Array<{ id: 'all' | PostType; label: string; icon?: string }>
 export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [selectedTab, setSelectedTab] = useState<'all' | PostType>('all');
+  const { profile } = useAuth();
 
-  const handlePost = (data: {
+  const activeAuthor = profile || MOCK_PROFILES[0];
+
+  useEffect(() => {
+    if (isUsingMockData()) return;
+
+    const fetchLivePosts = async () => {
+      try {
+        const supabase = createClient();
+        let query = supabase
+          .from('posts')
+          .select('*, author:profiles(*), forum:forums(*)')
+          .order('created_at', { ascending: false });
+
+        if (defaultForumId) {
+          query = query.eq('forum_id', defaultForumId);
+        }
+
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+          setPosts(data as unknown as Post[]);
+        }
+      } catch (err) {
+        console.warn('Could not fetch live posts, using initial:', err);
+      }
+    };
+
+    fetchLivePosts();
+  }, [defaultForumId]);
+
+  const handlePost = async (data: {
     content_markdown: string;
     post_type: PostType;
     forum_id?: string;
@@ -37,7 +69,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
   }) => {
     const newPost: Post = {
       id: createClientId('post'),
-      author_id: MOCK_PROFILES[0].id,
+      author_id: activeAuthor.id,
       forum_id: data.forum_id ?? null,
       title: data.title ?? null,
       content_markdown: data.content_markdown,
@@ -46,9 +78,28 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
       upvotes_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      author: MOCK_PROFILES[0],
+      author: activeAuthor,
     };
+
+    // Optimistic UI update
     setPosts((prev) => [newPost, ...prev]);
+
+    // Live Database Insertion if Supabase active
+    if (!isUsingMockData()) {
+      try {
+        const supabase = createClient();
+        await supabase.from('posts').insert({
+          author_id: activeAuthor.id,
+          forum_id: data.forum_id || null,
+          title: data.title || null,
+          content_markdown: data.content_markdown,
+          media_urls: data.media_urls,
+          post_type: data.post_type,
+        });
+      } catch (err) {
+        console.error('Post insertion error:', err);
+      }
+    }
   };
 
   const filteredPosts =

@@ -1,5 +1,6 @@
 // ============================================================
 // CommentSection – nested comments with LaTeX & reply support
+// Live Supabase sync with fallback to mock researcher session
 // ============================================================
 'use client';
 
@@ -9,7 +10,9 @@ import { Button } from '@/components/ui/Button';
 import { VerifiedBadge } from '@/components/ui/Badge';
 import { MarkdownContent } from '@/components/feed/MarkdownContent';
 import { formatRelativeDate } from '@/lib/utils';
-import { MOCK_PROFILES } from '@/lib/mock-data';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { createClient } from '@/lib/supabase/client';
+import { isUsingMockData, MOCK_PROFILES } from '@/lib/mock-data';
 import type { Comment } from '@/types';
 import { CornerDownRight, Send } from 'lucide-react';
 
@@ -30,17 +33,19 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
 
-  const currentUser = MOCK_PROFILES[0]; // Active researcher session
+  const { profile } = useAuth();
+  const currentUser = profile || MOCK_PROFILES[0];
 
-  const handleAddTopComment = () => {
+  const handleAddTopComment = async () => {
     if (!newCommentText.trim()) return;
 
+    const content = newCommentText.trim();
     const newComment: Comment = {
       id: generateId('comment'),
       post_id: postId,
       author_id: currentUser.id,
       parent_comment_id: null,
-      content_markdown: newCommentText.trim(),
+      content_markdown: content,
       created_at: new Date().toISOString(),
       author: currentUser,
       replies: [],
@@ -48,17 +53,32 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
 
     setComments((prev) => [...prev, newComment]);
     setNewCommentText('');
+
+    if (!isUsingMockData()) {
+      try {
+        const supabase = createClient();
+        await supabase.from('comments').insert({
+          post_id: postId,
+          author_id: currentUser.id,
+          parent_comment_id: null,
+          content_markdown: content,
+        });
+      } catch (err) {
+        console.error('Comment insertion error:', err);
+      }
+    }
   };
 
-  const handleAddReply = (parentId: string) => {
+  const handleAddReply = async (parentId: string) => {
     if (!replyText.trim()) return;
 
+    const content = replyText.trim();
     const newReply: Comment = {
       id: generateId('reply'),
       post_id: postId,
       author_id: currentUser.id,
       parent_comment_id: parentId,
-      content_markdown: replyText.trim(),
+      content_markdown: content,
       created_at: new Date().toISOString(),
       author: currentUser,
       replies: [],
@@ -78,6 +98,20 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
 
     setReplyingToId(null);
     setReplyText('');
+
+    if (!isUsingMockData()) {
+      try {
+        const supabase = createClient();
+        await supabase.from('comments').insert({
+          post_id: postId,
+          author_id: currentUser.id,
+          parent_comment_id: parentId,
+          content_markdown: content,
+        });
+      } catch (err) {
+        console.error('Reply insertion error:', err);
+      }
+    }
   };
 
   return (

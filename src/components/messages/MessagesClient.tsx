@@ -1,15 +1,17 @@
 // ============================================================
 // MessagesClient – 1-on-1 Realtime DM UI
-// Supports ?to=userId & preset=coffee_chat query params
+// Supports ?to=userId, preset=coffee_chat, and Supabase Realtime
 // ============================================================
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { VerifiedBadge } from '@/components/ui/Badge';
-import { MOCK_MESSAGES, MOCK_PROFILES } from '@/lib/mock-data';
+import { MOCK_MESSAGES, MOCK_PROFILES, isUsingMockData } from '@/lib/mock-data';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { createClient } from '@/lib/supabase/client';
 import { formatRelativeDate, createClientId, cn } from '@/lib/utils';
 import { Send, MessageSquare, Coffee, CheckCheck } from 'lucide-react';
 import type { Message } from '@/types';
@@ -19,8 +21,9 @@ export function MessagesClient() {
   const toUserId = searchParams.get('to');
   const preset = searchParams.get('preset');
 
-  const currentUserId = MOCK_PROFILES[0].id; // Simulated active researcher session
-  const currentUser = MOCK_PROFILES[0];
+  const { profile } = useAuth();
+  const currentUser = profile || MOCK_PROFILES[0];
+  const currentUserId = currentUser.id;
 
   const targetProfile = toUserId ? MOCK_PROFILES.find((p) => p.id === toUserId) : null;
   const initialPartner = targetProfile ?? MOCK_PROFILES[1];
@@ -38,6 +41,44 @@ export function MessagesClient() {
   const activeConversation =
     MOCK_PROFILES.find((p) => p.id === selectedPartnerId) ?? initialPartner;
 
+  // Supabase Realtime subscription when live keys are active
+  useEffect(() => {
+    if (isUsingMockData()) return;
+
+    try {
+      const supabase = createClient();
+      const channel = supabase
+        .channel('public:messages')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+          },
+          (payload) => {
+            const newRow = payload.new as Message;
+            if (
+              newRow.receiver_id === currentUserId ||
+              newRow.sender_id === currentUserId
+            ) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === newRow.id)) return prev;
+                return [...prev, newRow];
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } catch (err) {
+      console.warn('Realtime subscription error:', err);
+    }
+  }, [currentUserId]);
+
   // Derive conversations list
   const conversations = MOCK_PROFILES.filter((p) => p.id !== currentUserId);
 
@@ -50,14 +91,15 @@ export function MessagesClient() {
       )
     : [];
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim() || !activeConversation) return;
 
+    const content = inputValue.trim();
     const newMessage: Message = {
       id: createClientId('msg'),
       sender_id: currentUserId,
       receiver_id: activeConversation.id,
-      content: inputValue.trim(),
+      content,
       media_url: null,
       is_read: false,
       created_at: new Date().toISOString(),
@@ -67,6 +109,19 @@ export function MessagesClient() {
 
     setMessages((prev) => [...prev, newMessage]);
     setInputValue('');
+
+    if (!isUsingMockData()) {
+      try {
+        const supabase = createClient();
+        await supabase.from('messages').insert({
+          sender_id: currentUserId,
+          receiver_id: activeConversation.id,
+          content,
+        });
+      } catch (err) {
+        console.error('Message send error:', err);
+      }
+    }
   };
 
   const handleQuickCoffeeChat = () => {

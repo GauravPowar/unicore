@@ -4,12 +4,14 @@
 // ============================================================
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import type { Profile, DirectoryFilters, CollabStatus } from '@/types';
 import { ResearcherCard } from '@/components/directory/ResearcherCard';
 import { COLLAB_STATUS_LABELS } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { createClient } from '@/lib/supabase/client';
+import { isUsingMockData } from '@/lib/mock-data';
 
 interface DirectoryClientProps {
   profiles: Profile[];
@@ -24,29 +26,59 @@ const EMPTY_FILTERS: DirectoryFilters = {
 };
 
 export function DirectoryClient({ profiles }: DirectoryClientProps) {
+  const [profileList, setProfileList] = useState<Profile[]>(profiles);
   const [filters, setFilters] = useState<DirectoryFilters>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
 
+  useEffect(() => {
+    if (isUsingMockData()) return;
+
+    const fetchLiveProfiles = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          // Merge real profiles with initial list, prioritizing real newly registered profiles
+          const liveProfiles = data as Profile[];
+          const existingIds = new Set(liveProfiles.map((p) => p.id));
+          const merged = [
+            ...liveProfiles,
+            ...profiles.filter((p) => !existingIds.has(p.id)),
+          ];
+          setProfileList(merged);
+        }
+      } catch (err) {
+        console.warn('Could not fetch live profiles, using initial list:', err);
+      }
+    };
+
+    fetchLiveProfiles();
+  }, [profiles]);
+
   // Collect unique values for filter dropdowns
   const institutions = useMemo(
-    () => Array.from(new Set(profiles.map((p) => p.institution).filter(Boolean))) as string[],
-    [profiles]
+    () => Array.from(new Set(profileList.map((p) => p.institution).filter(Boolean))) as string[],
+    [profileList]
   );
 
   const allSkillsOffered = useMemo(
-    () => Array.from(new Set(profiles.flatMap((p) => p.skills_offered))).sort(),
-    [profiles]
+    () => Array.from(new Set(profileList.flatMap((p) => p.skills_offered))).sort(),
+    [profileList]
   );
 
   const allSkillsNeeded = useMemo(
-    () => Array.from(new Set(profiles.flatMap((p) => p.skills_needed))).sort(),
-    [profiles]
+    () => Array.from(new Set(profileList.flatMap((p) => p.skills_needed))).sort(),
+    [profileList]
   );
 
   // Filter logic
   const filtered = useMemo(() => {
     const q = filters.search.toLowerCase();
-    return profiles.filter((p) => {
+    return profileList.filter((p) => {
       if (
         q &&
         !p.full_name.toLowerCase().includes(q) &&
@@ -67,7 +99,7 @@ export function DirectoryClient({ profiles }: DirectoryClientProps) {
 
       return true;
     });
-  }, [profiles, filters]);
+  }, [profileList, filters]);
 
   const hasActiveFilters = Object.values(filters).some(Boolean);
 

@@ -41,8 +41,11 @@ export default function LoginPage() {
       setTimeout(() => {
         setIsLoading(false);
         setDemoSuccess(true);
-        setTimeout(() => router.push('/'), 800);
-      }, 500);
+        setTimeout(() => {
+          router.push('/');
+          router.refresh();
+        }, 500);
+      }, 400);
       return;
     }
 
@@ -61,7 +64,10 @@ export default function LoginPage() {
 
       setIsLoading(false);
       setDemoSuccess(true);
-      setTimeout(() => router.push('/'), 800);
+      setTimeout(() => {
+        router.push('/');
+        router.refresh();
+      }, 600);
     } catch {
       setErrorMessage('Login failed. Please check your credentials or network.');
       setIsLoading(false);
