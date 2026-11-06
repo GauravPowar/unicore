@@ -38,6 +38,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
   const [isFetchingOrcid, setIsFetchingOrcid] = useState(false);
   const [orcidSuccess, setOrcidSuccess] = useState(false);
 
@@ -95,7 +96,7 @@ export default function SignupPage() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${redirectOrigin}/`,
+          emailRedirectTo: `${redirectOrigin}/auth/callback`,
           data: {
             full_name: fullName.trim(),
             institution: institution.trim() || null,
@@ -113,25 +114,34 @@ export default function SignupPage() {
       }
 
       setIsLoading(false);
-      setIsSuccess(true);
 
-      // Auto-login to establish session if email confirmation is disabled
-      if (!data?.session) {
-        try {
-          await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
-          });
-        } catch {
-          // ignore
+      if (data?.session) {
+        setIsSuccess(true);
+        setNeedsEmailConfirmation(false);
+        setTimeout(() => {
+          router.push('/');
+          router.refresh();
+        }, 1200);
+      } else {
+        // Attempt immediate login (succeeds if email confirmation is disabled in Supabase)
+        const { data: signInData } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (signInData?.session) {
+          setIsSuccess(true);
+          setNeedsEmailConfirmation(false);
+          setTimeout(() => {
+            router.push('/');
+            router.refresh();
+          }, 1200);
+        } else {
+          // Email confirmation is required by Supabase project settings
+          setIsSuccess(true);
+          setNeedsEmailConfirmation(true);
         }
       }
-
-      // Navigate to feed and refresh server components
-      setTimeout(() => {
-        router.push('/');
-        router.refresh();
-      }, 1000);
     } catch (err) {
       console.error(err);
       setErrorMessage('Registration error. Please check your network or try again.');
@@ -163,27 +173,58 @@ export default function SignupPage() {
         )}
 
         {isSuccess ? (
-          <div className="py-10 text-center space-y-3">
-            <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto animate-bounce" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Account Created!
-            </h2>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              {isAcademic
-                ? 'Your institutional email has been recognized! You have been granted the Verified Researcher badge.'
-                : 'Welcome aboard! Your researcher profile is active.'}
-            </p>
-            <div className="pt-3 flex flex-col items-center gap-2">
-              <Link href="/">
-                <Button variant="primary" size="md" className="gap-1.5 text-xs">
-                  Go to Research Feed <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-              <span className="text-[11px] text-slate-400">
-                Redirecting automatically...
-              </span>
+          needsEmailConfirmation ? (
+            <div className="py-8 text-center space-y-4">
+              <div className="w-14 h-14 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400">
+                <Mail className="w-7 h-7" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                Verification Email Sent!
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
+                We sent a confirmation link to <strong className="text-slate-900 dark:text-white font-semibold">{email}</strong>. Please check your inbox and click the link to activate your UniCore account.
+              </p>
+              {isAcademic && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px]">
+                  <Sparkles className="w-3.5 h-3.5" /> Institutional domain detected &bull; Verified status unlocks upon email confirmation
+                </div>
+              )}
+              <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                <Link href="/login">
+                  <Button variant="primary" size="md" className="gap-1.5 text-xs">
+                    Sign In After Confirming <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+                <Link href="/">
+                  <Button variant="secondary" size="md" className="text-xs">
+                    Browse Feed as Guest
+                  </Button>
+                </Link>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="py-10 text-center space-y-3">
+              <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto animate-bounce" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                Account Created!
+              </h2>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                {isAcademic
+                  ? 'Your institutional email has been recognized! You have been granted the Verified Researcher badge.'
+                  : 'Welcome aboard! Your researcher profile is active.'}
+              </p>
+              <div className="pt-3 flex flex-col items-center gap-2">
+                <Link href="/">
+                  <Button variant="primary" size="md" className="gap-1.5 text-xs">
+                    Go to Research Feed <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+                <span className="text-[11px] text-slate-400">
+                  Redirecting automatically...
+                </span>
+              </div>
+            </div>
+          )
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Full Name */}
