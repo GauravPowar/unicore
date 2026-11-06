@@ -4,6 +4,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, VerifiedBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -48,6 +49,49 @@ async function fetchProfileData(id: string): Promise<{ profile: Profile | null; 
         profile: dbProfile as Profile,
         posts: (dbPosts as unknown as Post[]) || [],
       };
+    }
+
+    // Auto-heal: If profile record is missing from public.profiles, retrieve from auth.users
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const adminClient = createAdminClient();
+      const { data: authUserData } = await adminClient.auth.admin.getUserById(id);
+      if (authUserData?.user) {
+        const u = authUserData.user;
+        const isAcademic = Boolean(
+          u.email &&
+            (u.email.endsWith('.ac.in') ||
+              u.email.endsWith('.edu.in') ||
+              u.email.endsWith('.res.in'))
+        );
+        const autoProfile: Profile = {
+          id: u.id,
+          full_name:
+            u.user_metadata?.full_name || u.email?.split('@')[0] || 'Researcher',
+          institution: u.user_metadata?.institution || null,
+          department: u.user_metadata?.department || null,
+          city_state: null,
+          bio: null,
+          avatar_url: u.user_metadata?.avatar_url || null,
+          orcid_id: u.user_metadata?.orcid_id || null,
+          is_verified_researcher: isAcademic,
+          collab_status: u.user_metadata?.collab_status || 'open_to_collab',
+          skills_offered: [],
+          skills_needed: [],
+          created_at: u.created_at,
+          updated_at: u.updated_at || u.created_at,
+        };
+
+        try {
+          await adminClient.from('profiles').upsert(autoProfile);
+        } catch {
+          // ignore
+        }
+
+        return {
+          profile: autoProfile,
+          posts: [],
+        };
+      }
     }
   } catch (err) {
     console.error('Error fetching profile:', err);

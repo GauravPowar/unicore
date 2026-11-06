@@ -238,6 +238,11 @@ ALTER TABLE public.post_upvotes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "profiles_select_all"
   ON public.profiles FOR SELECT USING (true);
 
+-- Authenticated users can insert their own profile
+CREATE POLICY "profiles_insert_own"
+  ON public.profiles FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
 -- Users can only update their own profile
 CREATE POLICY "profiles_update_own"
   ON public.profiles FOR UPDATE
