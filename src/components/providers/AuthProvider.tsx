@@ -1,12 +1,11 @@
 // ============================================================
 // AuthProvider – Session & Realtime Auth Management
-// Connects Supabase Auth with fallback to mock researcher session
+// 100% Live Supabase Auth (Zero Mock Data)
 // ============================================================
 'use client';
 
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { isUsingMockData, MOCK_PROFILES } from '@/lib/mock-data';
 import type { Profile } from '@/types';
 import type { User } from '@supabase/supabase-js';
 
@@ -22,32 +21,27 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   isLoading: false,
-  isMock: true,
+  isMock: false,
   signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const isMock = isUsingMockData();
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(() => (isMock ? MOCK_PROFILES[0] : null));
-  const [isLoading, setIsLoading] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const signOut = useCallback(async () => {
-    if (!isMock) {
-      try {
-        const supabase = createClient();
-        await supabase.auth.signOut();
-      } catch {
-        // ignore
-      }
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
     }
     setUser(null);
     setProfile(null);
-  }, [isMock]);
+  }, []);
 
   useEffect(() => {
-    if (isMock) return;
-
     let isMounted = true;
     const supabase = createClient();
 
@@ -141,11 +135,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [isMock]);
+  }, []);
 
   const value = useMemo(
-    () => ({ user, profile, isLoading, isMock, signOut }),
-    [user, profile, isLoading, isMock, signOut]
+    () => ({ user, profile, isLoading, isMock: false, signOut }),
+    [user, profile, isLoading, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

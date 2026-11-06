@@ -3,7 +3,6 @@
 // ============================================================
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { mockData, isUsingMockData } from '@/lib/mock-data';
 import { createClient } from '@/lib/supabase/server';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, VerifiedBadge } from '@/components/ui/Badge';
@@ -30,38 +29,31 @@ interface ProfilePageProps {
 }
 
 async function fetchProfileData(id: string): Promise<{ profile: Profile | null; posts: Post[] }> {
-  if (!isUsingMockData()) {
-    try {
-      const supabase = await createClient();
-      const { data: dbProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+  try {
+    const supabase = await createClient();
+    const { data: dbProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
 
-      if (dbProfile) {
-        const { data: dbPosts } = await supabase
-          .from('posts')
-          .select('*, author:profiles(*), forum:forums(*)')
-          .eq('author_id', id)
-          .order('created_at', { ascending: false });
+    if (dbProfile) {
+      const { data: dbPosts } = await supabase
+        .from('posts')
+        .select('*, author:profiles(*), forum:forums(*)')
+        .eq('author_id', id)
+        .order('created_at', { ascending: false });
 
-        return {
-          profile: dbProfile as Profile,
-          posts: (dbPosts as unknown as Post[]) || [],
-        };
-      }
-    } catch {
-      // Fallback to mock
+      return {
+        profile: dbProfile as Profile,
+        posts: (dbPosts as unknown as Post[]) || [],
+      };
     }
+  } catch (err) {
+    console.error('Error fetching profile:', err);
   }
 
-  const mockProfile = mockData.getProfileById(id);
-  const mockPosts = mockProfile
-    ? mockData.getPosts().filter((p) => p.author_id === mockProfile.id)
-    : [];
-
-  return { profile: mockProfile ?? null, posts: mockPosts };
+  return { profile: null, posts: [] };
 }
 
 export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
@@ -226,9 +218,4 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       </div>
     </div>
   );
-}
-
-// Pre-render known profile IDs
-export async function generateStaticParams() {
-  return mockData.getProfiles().map((p) => ({ id: p.id }));
 }

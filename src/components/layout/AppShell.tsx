@@ -26,7 +26,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ShareModal } from '@/components/ui/ShareModal';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { MOCK_FORUMS } from '@/lib/mock-data';
+import { OFFICIAL_FORUMS } from '@/lib/constants';
 
 const PRIMARY_NAV = [
   { href: '/', label: 'Feed', icon: Home },
@@ -112,7 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </p>
           </div>
 
-          {MOCK_FORUMS.map((forum) => {
+          {OFFICIAL_FORUMS.map((forum) => {
             const Icon = FORUM_ICONS[forum.slug] ?? BookOpen;
             const href = `/forums/${forum.slug}`;
             return (

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { MarkdownContent } from '@/components/feed/MarkdownContent';
 import { wordCount } from '@/lib/validators';
 import { POST_TYPE_CONFIG } from '@/lib/utils';
-import { MOCK_FORUMS } from '@/lib/mock-data';
+import { OFFICIAL_FORUMS } from '@/lib/constants';
 import { uploadPostMedia } from '@/lib/supabase/storage';
 import type { PostType } from '@/types';
 import {
@@ -142,7 +142,7 @@ export function PostComposer({ onPost, defaultForumId }: PostComposerProps) {
             className="appearance-none text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1.5 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">General Feed</option>
-            {MOCK_FORUMS.map((f) => (
+            {OFFICIAL_FORUMS.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
               </option>

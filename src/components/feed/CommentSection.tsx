@@ -12,7 +12,6 @@ import { MarkdownContent } from '@/components/feed/MarkdownContent';
 import { formatRelativeDate } from '@/lib/utils';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
-import { isUsingMockData, MOCK_PROFILES } from '@/lib/mock-data';
 import type { Comment } from '@/types';
 import { CornerDownRight, Send } from 'lucide-react';
 
@@ -24,23 +23,19 @@ function generateId(prefix: string) {
 
 interface CommentSectionProps {
   postId: string;
-  initialComments: Comment[];
+  initialComments?: Comment[];
 }
 
-export function CommentSection({ postId, initialComments }: CommentSectionProps) {
+export function CommentSection({ postId, initialComments = [] }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newCommentText, setNewCommentText] = useState('');
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
 
   const { user, profile } = useAuth();
-  const currentUser = profile || MOCK_PROFILES[0];
-  const currentUserId = user?.id || currentUser.id;
 
-  // Load real comments from Supabase if active
+  // Load real comments from Supabase
   useEffect(() => {
-    if (isUsingMockData()) return;
-
     const fetchComments = async () => {
       try {
         const supabase = createClient();
@@ -50,7 +45,7 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
           .eq('post_id', postId)
           .order('created_at', { ascending: true });
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           const topComments: Comment[] = [];
           const replyMap = new Map<string, Comment[]>();
 
@@ -82,7 +77,7 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
   const handleAddTopComment = async () => {
     if (!newCommentText.trim()) return;
 
-    if (!isUsingMockData() && !user) {
+    if (!user || !profile) {
       alert('Please sign in to comment on posts.');
       window.location.href = '/login';
       return;
@@ -92,48 +87,46 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
     const newComment: Comment = {
       id: generateId('comment'),
       post_id: postId,
-      author_id: currentUserId,
+      author_id: user.id,
       parent_comment_id: null,
       content_markdown: content,
       created_at: new Date().toISOString(),
-      author: currentUser,
+      author: profile,
       replies: [],
     };
 
     setComments((prev) => [...prev, newComment]);
     setNewCommentText('');
 
-    if (!isUsingMockData() && user) {
-      try {
-        const supabase = createClient();
-        const { data: dbComment } = await supabase
-          .from('comments')
-          .insert({
-            post_id: postId,
-            author_id: user.id,
-            parent_comment_id: null,
-            content_markdown: content,
-          })
-          .select('*, author:profiles(*)')
-          .single();
+    try {
+      const supabase = createClient();
+      const { data: dbComment } = await supabase
+        .from('comments')
+        .insert({
+          post_id: postId,
+          author_id: user.id,
+          parent_comment_id: null,
+          content_markdown: content,
+        })
+        .select('*, author:profiles(*)')
+        .single();
 
-        if (dbComment) {
-          setComments((prev) =>
-            prev.map((c) =>
-              c.id === newComment.id ? ({ ...dbComment, replies: [] } as unknown as Comment) : c
-            )
-          );
-        }
-      } catch (err) {
-        console.error('Comment insertion error:', err);
+      if (dbComment) {
+        setComments((prev) =>
+          prev.map((c) =>
+            c.id === newComment.id ? ({ ...dbComment, replies: [] } as unknown as Comment) : c
+          )
+        );
       }
+    } catch (err) {
+      console.error('Comment insertion error:', err);
     }
   };
 
   const handleAddReply = async (parentId: string) => {
     if (!replyText.trim()) return;
 
-    if (!isUsingMockData() && !user) {
+    if (!user || !profile) {
       alert('Please sign in to reply to comments.');
       window.location.href = '/login';
       return;
@@ -143,11 +136,11 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
     const newReply: Comment = {
       id: generateId('reply'),
       post_id: postId,
-      author_id: currentUserId,
+      author_id: user.id,
       parent_comment_id: parentId,
       content_markdown: content,
       created_at: new Date().toISOString(),
-      author: currentUser,
+      author: profile,
       replies: [],
     };
 
@@ -166,18 +159,16 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
     setReplyingToId(null);
     setReplyText('');
 
-    if (!isUsingMockData() && user) {
-      try {
-        const supabase = createClient();
-        await supabase.from('comments').insert({
-          post_id: postId,
-          author_id: user.id,
-          parent_comment_id: parentId,
-          content_markdown: content,
-        });
-      } catch (err) {
-        console.error('Reply insertion error:', err);
-      }
+    try {
+      const supabase = createClient();
+      await supabase.from('comments').insert({
+        post_id: postId,
+        author_id: user.id,
+        parent_comment_id: parentId,
+        content_markdown: content,
+      });
+    } catch (err) {
+      console.error('Reply insertion error:', err);
     }
   };
 
@@ -185,7 +176,7 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
     <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
       {/* Top-level comment input */}
       <div className="flex gap-2">
-        <Avatar name={currentUser.full_name} src={currentUser.avatar_url} size="sm" />
+        <Avatar name={profile?.full_name ?? 'Researcher'} src={profile?.avatar_url ?? null} size="sm" />
         <div className="flex-1 flex gap-2">
           <input
             type="text"

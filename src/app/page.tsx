@@ -1,20 +1,36 @@
 // ============================================================
 // Home Feed Page (Server Component)
-// With cacheComponents: data is dynamic by default.
-// PostCard is a Client Component — handles date rendering.
+// Live Supabase integration with zero mock data
 // ============================================================
-import { mockData } from '@/lib/mock-data';
+import { createClient } from '@/lib/supabase/server';
 import { FeedClient } from '@/components/feed/FeedClient';
 import { Rss } from 'lucide-react';
 import type { Metadata } from 'next';
+import type { Post } from '@/types';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Feed',
+  title: 'Research Feed | UniCore',
   description: 'Latest micro-thoughts, questions, and collab pitches from Indian researchers',
 };
 
-export default function HomePage() {
-  const posts = mockData.getPosts();
+export default async function HomePage() {
+  let posts: Post[] = [];
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*, author:profiles(*), forum:forums(*)')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      posts = data as unknown as Post[];
+    }
+  } catch (err) {
+    console.error('Error loading live posts:', err);
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">

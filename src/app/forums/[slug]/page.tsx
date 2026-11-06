@@ -1,13 +1,16 @@
 // ============================================================
 // /forums/[slug] – Forum page (Server Component)
-// With cacheComponents: data is dynamic by default.
-// PostCard is a Client Component — handles date rendering.
+// Live Supabase integration with zero mock data
 // ============================================================
 import { notFound } from 'next/navigation';
-import { mockData } from '@/lib/mock-data';
+import { createClient } from '@/lib/supabase/server';
 import { FeedClient } from '@/components/feed/FeedClient';
 import { Badge } from '@/components/ui/Badge';
+import { OFFICIAL_FORUMS } from '@/lib/constants';
 import type { Metadata } from 'next';
+import type { Post } from '@/types';
+
+export const dynamic = 'force-dynamic';
 
 interface ForumPageProps {
   params: Promise<{ slug: string }>;
@@ -15,18 +18,45 @@ interface ForumPageProps {
 
 export async function generateMetadata({ params }: ForumPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const forum = mockData.getForumBySlug(slug);
-  if (!forum) return { title: 'Forum Not Found' };
-  return { title: forum.name, description: forum.description ?? undefined };
+  const localForum = OFFICIAL_FORUMS.find((f) => f.slug === slug);
+  if (!localForum) return { title: 'Forum Not Found | UniCore' };
+  return { title: `${localForum.name} | UniCore`, description: localForum.description ?? undefined };
 }
 
 export default async function ForumPage({ params }: ForumPageProps) {
   const { slug } = await params;
-  const forum = mockData.getForumBySlug(slug);
+
+  let forum = OFFICIAL_FORUMS.find((f) => f.slug === slug);
+  let posts: Post[] = [];
+
+  try {
+    const supabase = await createClient();
+    const { data: dbForum } = await supabase
+      .from('forums')
+      .select('*')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (dbForum) {
+      forum = dbForum;
+    }
+
+    if (forum) {
+      const { data: dbPosts } = await supabase
+        .from('posts')
+        .select('*, author:profiles(*), forum:forums(*)')
+        .eq('forum_id', forum.id)
+        .order('created_at', { ascending: false });
+
+      if (dbPosts) {
+        posts = dbPosts as unknown as Post[];
+      }
+    }
+  } catch (err) {
+    console.warn('Could not query forum data:', err);
+  }
 
   if (!forum) notFound();
-
-  const posts = mockData.getPostsByForum(forum.id);
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
@@ -41,22 +71,7 @@ export default async function ForumPage({ params }: ForumPageProps) {
         )}
       </div>
 
-      {/* Feed with composer pre-set to this forum */}
-      {posts.length === 0 ? (
-        <div className="space-y-4">
-          <FeedClient initialPosts={[]} defaultForumId={forum.id} />
-          <div className="text-center py-8 text-slate-400 dark:text-slate-500">
-            <p className="text-sm">Be the first to start a discussion in this forum!</p>
-          </div>
-        </div>
-      ) : (
-        <FeedClient initialPosts={posts} defaultForumId={forum.id} />
-      )}
+      <FeedClient initialPosts={posts} defaultForumId={forum.id} />
     </div>
   );
-}
-
-// Pre-render known forum slugs
-export async function generateStaticParams() {
-  return mockData.getForums().map((f) => ({ slug: f.slug }));
 }

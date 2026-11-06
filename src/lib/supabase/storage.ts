@@ -3,20 +3,13 @@
 // Stores public media URLs as TEXT[] (no raw binaries in DB)
 // ============================================================
 import { createClient } from '@/lib/supabase/client';
-import { isUsingMockData } from '@/lib/mock-data';
 
 const BUCKET_NAME = 'post-media';
 
 /**
  * Uploads a file to Supabase Storage and returns its public URL.
- * In mock mode or if Supabase keys are not set, falls back to an object URL.
  */
 export async function uploadPostMedia(file: File): Promise<string> {
-  if (isUsingMockData()) {
-    // Client preview object URL
-    return URL.createObjectURL(file);
-  }
-
   try {
     const supabase = createClient();
     const fileExt = file.name.split('.').pop()?.toLowerCase() ?? 'png';

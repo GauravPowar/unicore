@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
-import { isUsingMockData } from '@/lib/mock-data';
 import { isIndianAcademicEmail } from '@/lib/validators';
 import {
   AtSign,
@@ -36,18 +35,6 @@ export default function LoginPage() {
     if (!email || !password) return;
 
     setIsLoading(true);
-
-    if (isUsingMockData()) {
-      setTimeout(() => {
-        setIsLoading(false);
-        setDemoSuccess(true);
-        setTimeout(() => {
-          router.push('/');
-          router.refresh();
-        }, 500);
-      }, 400);
-      return;
-    }
 
     try {
       const supabase = createClient();

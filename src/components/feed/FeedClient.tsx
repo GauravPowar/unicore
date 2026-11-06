@@ -9,7 +9,6 @@ import { PostCard } from '@/components/feed/PostCard';
 import { createClientId } from '@/lib/utils';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
-import { isUsingMockData, MOCK_PROFILES } from '@/lib/mock-data';
 import type { Post, PostType } from '@/types';
 import { Sparkles } from 'lucide-react';
 
@@ -31,11 +30,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
   const [selectedTab, setSelectedTab] = useState<'all' | PostType>('all');
   const { profile, user } = useAuth();
 
-  const activeAuthor = profile || MOCK_PROFILES[0];
-
   useEffect(() => {
-    if (isUsingMockData()) return;
-
     const fetchLivePosts = async () => {
       try {
         const supabase = createClient();
@@ -49,11 +44,11 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
         }
 
         const { data, error } = await query;
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           setPosts(data as unknown as Post[]);
         }
       } catch (err) {
-        console.warn('Could not fetch live posts, using initial:', err);
+        console.warn('Could not fetch live posts:', err);
       }
     };
 
@@ -67,17 +62,15 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
     title?: string;
     media_urls: string[];
   }) => {
-    if (!isUsingMockData() && !user) {
+    if (!user || !profile) {
       alert('Please sign in to publish your post to the UniCore research community.');
       window.location.href = '/login';
       return;
     }
 
-    const currentAuthorId = user?.id || activeAuthor.id;
-
     const newPost: Post = {
       id: createClientId('post'),
-      author_id: currentAuthorId,
+      author_id: user.id,
       forum_id: data.forum_id ?? null,
       title: data.title ?? null,
       content_markdown: data.content_markdown,
@@ -86,38 +79,36 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
       upvotes_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      author: activeAuthor,
+      author: profile,
     };
 
     // Optimistic UI update
     setPosts((prev) => [newPost, ...prev]);
 
-    // Live Database Insertion if Supabase active
-    if (!isUsingMockData() && user) {
-      try {
-        const supabase = createClient();
-        const { data: dbPost, error } = await supabase
-          .from('posts')
-          .insert({
-            author_id: user.id,
-            forum_id: data.forum_id || null,
-            title: data.title || null,
-            content_markdown: data.content_markdown,
-            media_urls: data.media_urls,
-            post_type: data.post_type,
-          })
-          .select('*, author:profiles(*), forum:forums(*)')
-          .single();
+    // Live Database Insertion into Supabase
+    try {
+      const supabase = createClient();
+      const { data: dbPost, error } = await supabase
+        .from('posts')
+        .insert({
+          author_id: user.id,
+          forum_id: data.forum_id || null,
+          title: data.title || null,
+          content_markdown: data.content_markdown,
+          media_urls: data.media_urls,
+          post_type: data.post_type,
+        })
+        .select('*, author:profiles(*), forum:forums(*)')
+        .single();
 
-        if (!error && dbPost) {
-          setPosts((prev) => [
-            dbPost as unknown as Post,
-            ...prev.filter((p) => p.id !== newPost.id),
-          ]);
-        }
-      } catch (err) {
-        console.error('Post insertion error:', err);
+      if (!error && dbPost) {
+        setPosts((prev) => [
+          dbPost as unknown as Post,
+          ...prev.filter((p) => p.id !== newPost.id),
+        ]);
       }
+    } catch (err) {
+      console.error('Post insertion error:', err);
     }
   };
 
@@ -159,9 +150,16 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
 
       {/* Post List */}
       {filteredPosts.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center text-slate-400 space-y-2">
-          <Sparkles className="w-8 h-8 mx-auto text-brand-400/40" />
-          <p className="text-sm">No posts under this filter yet.</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-10 text-center text-slate-400 space-y-3 shadow-xs">
+          <Sparkles className="w-8 h-8 mx-auto text-brand-400/50" />
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            {selectedTab === 'all'
+              ? 'No research posts yet'
+              : `No ${FILTER_TABS.find((t) => t.id === selectedTab)?.label} yet`}
+          </h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            Share your lab findings, protocols, or collaboration pitch above to get the discussion started.
+          </p>
         </div>
       ) : (
         filteredPosts.map((post) => <PostCard key={post.id} post={post} />)

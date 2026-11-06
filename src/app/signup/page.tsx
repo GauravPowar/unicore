@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/Button';
 import { VerifiedBadge } from '@/components/ui/Badge';
 import { isIndianAcademicEmail, isValidOrcidId } from '@/lib/validators';
 import { createClient } from '@/lib/supabase/client';
-import { isUsingMockData } from '@/lib/mock-data';
 import {
   AtSign,
   Mail,
@@ -71,18 +70,6 @@ export default function SignupPage() {
     if (!fullName || !email || !password) return;
 
     setIsLoading(true);
-
-    if (isUsingMockData()) {
-      setTimeout(() => {
-        setIsLoading(false);
-        setIsSuccess(true);
-        setTimeout(() => {
-          router.push('/');
-          router.refresh();
-        }, 800);
-      }, 500);
-      return;
-    }
 
     // Real Supabase Auth Registration
     try {

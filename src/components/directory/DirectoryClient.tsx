@@ -11,7 +11,6 @@ import { ResearcherCard } from '@/components/directory/ResearcherCard';
 import { COLLAB_STATUS_LABELS } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
-import { isUsingMockData } from '@/lib/mock-data';
 
 interface DirectoryClientProps {
   profiles: Profile[];
@@ -31,8 +30,6 @@ export function DirectoryClient({ profiles }: DirectoryClientProps) {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    if (isUsingMockData()) return;
-
     const fetchLiveProfiles = async () => {
       try {
         const supabase = createClient();
@@ -41,23 +38,16 @@ export function DirectoryClient({ profiles }: DirectoryClientProps) {
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (!error && data && data.length > 0) {
-          // Merge real profiles with initial list, prioritizing real newly registered profiles
-          const liveProfiles = data as Profile[];
-          const existingIds = new Set(liveProfiles.map((p) => p.id));
-          const merged = [
-            ...liveProfiles,
-            ...profiles.filter((p) => !existingIds.has(p.id)),
-          ];
-          setProfileList(merged);
+        if (!error && data) {
+          setProfileList(data as Profile[]);
         }
       } catch (err) {
-        console.warn('Could not fetch live profiles, using initial list:', err);
+        console.warn('Could not fetch live profiles:', err);
       }
     };
 
     fetchLiveProfiles();
-  }, [profiles]);
+  }, []);
 
   // Collect unique values for filter dropdowns
   const institutions = useMemo(
