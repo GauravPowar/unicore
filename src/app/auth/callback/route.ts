@@ -22,3 +22,4 @@ export async function GET(request: Request) {
   // If code exchange fails or no code is present, redirect to feed or login with notice
   return NextResponse.redirect(`${origin}${next}`);
 }
+

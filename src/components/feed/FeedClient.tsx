@@ -29,7 +29,7 @@ const FILTER_TABS: Array<{ id: 'all' | PostType; label: string; icon?: string }>
 export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [selectedTab, setSelectedTab] = useState<'all' | PostType>('all');
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   const activeAuthor = profile || MOCK_PROFILES[0];
 
@@ -67,9 +67,17 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
     title?: string;
     media_urls: string[];
   }) => {
+    if (!isUsingMockData() && !user) {
+      alert('Please sign in to publish your post to the UniCore research community.');
+      window.location.href = '/login';
+      return;
+    }
+
+    const currentAuthorId = user?.id || activeAuthor.id;
+
     const newPost: Post = {
       id: createClientId('post'),
-      author_id: activeAuthor.id,
+      author_id: currentAuthorId,
       forum_id: data.forum_id ?? null,
       title: data.title ?? null,
       content_markdown: data.content_markdown,
@@ -85,17 +93,28 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
     setPosts((prev) => [newPost, ...prev]);
 
     // Live Database Insertion if Supabase active
-    if (!isUsingMockData()) {
+    if (!isUsingMockData() && user) {
       try {
         const supabase = createClient();
-        await supabase.from('posts').insert({
-          author_id: activeAuthor.id,
-          forum_id: data.forum_id || null,
-          title: data.title || null,
-          content_markdown: data.content_markdown,
-          media_urls: data.media_urls,
-          post_type: data.post_type,
-        });
+        const { data: dbPost, error } = await supabase
+          .from('posts')
+          .insert({
+            author_id: user.id,
+            forum_id: data.forum_id || null,
+            title: data.title || null,
+            content_markdown: data.content_markdown,
+            media_urls: data.media_urls,
+            post_type: data.post_type,
+          })
+          .select('*, author:profiles(*), forum:forums(*)')
+          .single();
+
+        if (!error && dbPost) {
+          setPosts((prev) => [
+            dbPost as unknown as Post,
+            ...prev.filter((p) => p.id !== newPost.id),
+          ]);
+        }
       } catch (err) {
         console.error('Post insertion error:', err);
       }

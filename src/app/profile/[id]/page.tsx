@@ -3,7 +3,8 @@
 // ============================================================
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { mockData } from '@/lib/mock-data';
+import { mockData, isUsingMockData } from '@/lib/mock-data';
+import { createClient } from '@/lib/supabase/server';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, VerifiedBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -19,29 +20,65 @@ import {
   FileText,
 } from 'lucide-react';
 import type { Metadata } from 'next';
+import type { Profile, Post } from '@/types';
+
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
 
 interface ProfilePageProps {
   params: Promise<{ id: string }>;
 }
 
+async function fetchProfileData(id: string): Promise<{ profile: Profile | null; posts: Post[] }> {
+  if (!isUsingMockData()) {
+    try {
+      const supabase = await createClient();
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (dbProfile) {
+        const { data: dbPosts } = await supabase
+          .from('posts')
+          .select('*, author:profiles(*), forum:forums(*)')
+          .eq('author_id', id)
+          .order('created_at', { ascending: false });
+
+        return {
+          profile: dbProfile as Profile,
+          posts: (dbPosts as unknown as Post[]) || [],
+        };
+      }
+    } catch {
+      // Fallback to mock
+    }
+  }
+
+  const mockProfile = mockData.getProfileById(id);
+  const mockPosts = mockProfile
+    ? mockData.getPosts().filter((p) => p.author_id === mockProfile.id)
+    : [];
+
+  return { profile: mockProfile ?? null, posts: mockPosts };
+}
+
 export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
   const { id } = await params;
-  const profile = mockData.getProfileById(id);
-  if (!profile) return { title: 'Researcher Not Found' };
+  const { profile } = await fetchProfileData(id);
+  if (!profile) return { title: 'Researcher Not Found | UniCore' };
   return {
     title: `${profile.full_name} | UniCore`,
-    description: profile.bio ?? `${profile.full_name} on UniCore`,
+    description: profile.bio ?? `${profile.full_name} on UniCore Indian Researcher Network`,
   };
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { id } = await params;
-  const profile = mockData.getProfileById(id);
+  const { profile, posts: userPosts } = await fetchProfileData(id);
 
   if (!profile) notFound();
-
-  // Get posts authored by this researcher
-  const userPosts = mockData.getPosts().filter((p) => p.author_id === profile.id);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">

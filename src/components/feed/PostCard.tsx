@@ -4,14 +4,16 @@
 // ============================================================
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, VerifiedBadge } from '@/components/ui/Badge';
 import { MarkdownContent } from '@/components/feed/MarkdownContent';
 import { CommentSection } from '@/components/feed/CommentSection';
 import { POST_TYPE_CONFIG, formatRelativeDate, cn } from '@/lib/utils';
-import { mockData } from '@/lib/mock-data';
+import { mockData, isUsingMockData } from '@/lib/mock-data';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { createClient } from '@/lib/supabase/client';
 import { ArrowUp, MessageSquare, Share2, Bookmark, Check } from 'lucide-react';
 import type { Post } from '@/types';
 
@@ -26,19 +28,67 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
   const typeConfig = POST_TYPE_CONFIG[post.post_type];
   const initialComments = mockData.getCommentsByPost(post.id);
 
+  const { user } = useAuth();
   const [upvotes, setUpvotes] = useState(post.upvotes_count);
   const [hasUpvoted, setHasUpvoted] = useState(false);
   const [showComments, setShowComments] = useState(defaultShowComments);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleUpvote = () => {
-    if (hasUpvoted) {
-      setUpvotes((v) => v - 1);
-      setHasUpvoted(false);
-    } else {
-      setUpvotes((v) => v + 1);
-      setHasUpvoted(true);
+  // Check if current user has already upvoted this post
+  useEffect(() => {
+    if (isUsingMockData() || !user) return;
+
+    const checkUpvote = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('post_upvotes')
+          .select('post_id')
+          .eq('post_id', post.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (data) setHasUpvoted(true);
+      } catch {
+        // ignore
+      }
+    };
+
+    checkUpvote();
+  }, [post.id, user]);
+
+  const handleUpvote = async () => {
+    const nextState = !hasUpvoted;
+    setUpvotes((v) => (nextState ? v + 1 : v - 1));
+    setHasUpvoted(nextState);
+
+    if (!isUsingMockData() && user) {
+      try {
+        const supabase = createClient();
+        if (nextState) {
+          await supabase.from('post_upvotes').upsert({
+            post_id: post.id,
+            user_id: user.id,
+          });
+          await supabase
+            .from('posts')
+            .update({ upvotes_count: upvotes + 1 })
+            .eq('id', post.id);
+        } else {
+          await supabase
+            .from('post_upvotes')
+            .delete()
+            .eq('post_id', post.id)
+            .eq('user_id', user.id);
+          await supabase
+            .from('posts')
+            .update({ upvotes_count: Math.max(0, upvotes - 1) })
+            .eq('id', post.id);
+        }
+      } catch (err) {
+        console.warn('Upvote error:', err);
+      }
     }
   };
 

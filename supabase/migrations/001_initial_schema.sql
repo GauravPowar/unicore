@@ -192,10 +192,25 @@ BEGIN
     verified := true;
   END IF;
 
-  INSERT INTO public.profiles (id, full_name, is_verified_researcher)
+  INSERT INTO public.profiles (
+    id,
+    full_name,
+    institution,
+    department,
+    orcid_id,
+    collab_status,
+    is_verified_researcher
+  )
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    NEW.raw_user_meta_data->>'institution',
+    NEW.raw_user_meta_data->>'department',
+    NEW.raw_user_meta_data->>'orcid_id',
+    COALESCE(
+      NULLIF(NEW.raw_user_meta_data->>'collab_status', '')::collab_status_enum,
+      'open_to_collab'::collab_status_enum
+    ),
     verified
   );
   RETURN NEW;
@@ -299,6 +314,25 @@ CREATE POLICY "upvotes_insert_own"
 CREATE POLICY "upvotes_delete_own"
   ON public.post_upvotes FOR DELETE
   USING (auth.uid() = user_id);
+
+-- ─────────────────────────────────────────────────────────────
+-- STORAGE: post-media bucket & policies
+-- ─────────────────────────────────────────────────────────────
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('post-media', 'post-media', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Anyone can view media files
+DROP POLICY IF EXISTS "Public media access" ON storage.objects;
+CREATE POLICY "Public media access"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'post-media');
+
+-- Authenticated users can upload media
+DROP POLICY IF EXISTS "Authenticated users can upload media" ON storage.objects;
+CREATE POLICY "Authenticated users can upload media"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'post-media' AND auth.role() = 'authenticated');
 
 -- ─────────────────────────────────────────────────────────────
 -- REALTIME: enable publication for DMs

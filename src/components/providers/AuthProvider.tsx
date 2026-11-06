@@ -51,6 +51,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
     const supabase = createClient();
 
+    const syncProfile = async (targetUser: User | null) => {
+      if (!targetUser) {
+        setProfile(null);
+        return;
+      }
+
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', targetUser.id)
+        .maybeSingle();
+
+      if (!isMounted) return;
+
+      if (userProfile) {
+        setProfile(userProfile as Profile);
+      } else {
+        // Self-heal: ensure profile exists in database for this authenticated user
+        const isAcademic = Boolean(
+          targetUser.email &&
+            (targetUser.email.endsWith('.ac.in') ||
+              targetUser.email.endsWith('.edu.in') ||
+              targetUser.email.endsWith('.res.in'))
+        );
+        const fallbackProfile: Profile = {
+          id: targetUser.id,
+          full_name:
+            targetUser.user_metadata?.full_name ||
+            targetUser.email?.split('@')[0] ||
+            'Researcher',
+          institution: targetUser.user_metadata?.institution || null,
+          department: targetUser.user_metadata?.department || null,
+          city_state: null,
+          bio: null,
+          avatar_url: targetUser.user_metadata?.avatar_url || null,
+          orcid_id: targetUser.user_metadata?.orcid_id || null,
+          is_verified_researcher: isAcademic,
+          collab_status:
+            targetUser.user_metadata?.collab_status || 'open_to_collab',
+          skills_offered: [],
+          skills_needed: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        try {
+          await supabase.from('profiles').upsert(fallbackProfile);
+        } catch {
+          // ignore
+        }
+
+        if (isMounted) {
+          setProfile(fallbackProfile);
+        }
+      }
+    };
+
     const fetchSession = async () => {
       try {
         const {
@@ -59,18 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!isMounted) return;
         setUser(currentUser);
-
-        if (currentUser) {
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-
-          if (isMounted && userProfile) {
-            setProfile(userProfile as Profile);
-          }
-        }
+        await syncProfile(currentUser);
       } catch {
         // network or unauthenticated
       } finally {
@@ -88,17 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isMounted) return;
       const authUser = session?.user ?? null;
       setUser(authUser);
-      if (authUser) {
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-
-        if (isMounted && userProfile) setProfile(userProfile as Profile);
-      } else {
-        setProfile(null);
-      }
+      await syncProfile(authUser);
     });
 
     return () => {

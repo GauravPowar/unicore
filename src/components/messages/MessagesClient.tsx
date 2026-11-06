@@ -14,22 +14,53 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
 import { formatRelativeDate, createClientId, cn } from '@/lib/utils';
 import { Send, MessageSquare, Coffee, CheckCheck } from 'lucide-react';
-import type { Message } from '@/types';
+import type { Message, Profile } from '@/types';
 
 export function MessagesClient() {
   const searchParams = useSearchParams();
   const toUserId = searchParams.get('to');
   const preset = searchParams.get('preset');
 
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const currentUser = profile || MOCK_PROFILES[0];
-  const currentUserId = currentUser.id;
+  const currentUserId = user?.id || currentUser.id;
 
-  const targetProfile = toUserId ? MOCK_PROFILES.find((p) => p.id === toUserId) : null;
-  const initialPartner = targetProfile ?? MOCK_PROFILES[1];
-
+  const [allProfiles, setAllProfiles] = useState<Profile[]>(MOCK_PROFILES);
   const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string>(initialPartner.id);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>(
+    toUserId || MOCK_PROFILES[1].id
+  );
+
+  // Fetch real registered profiles from Supabase if live
+  useEffect(() => {
+    if (isUsingMockData()) return;
+
+    const loadProfiles = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.from('profiles').select('*');
+        if (data && data.length > 0) {
+          const liveProfiles = data as Profile[];
+          const liveIds = new Set(liveProfiles.map((p) => p.id));
+          const combined = [
+            ...liveProfiles,
+            ...MOCK_PROFILES.filter((p) => !liveIds.has(p.id)),
+          ];
+          setAllProfiles(combined);
+
+          if (toUserId) {
+            setSelectedPartnerId(toUserId);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load profiles for messages:', err);
+      }
+    };
+
+    loadProfiles();
+  }, [toUserId]);
+
+  const targetProfile = allProfiles.find((p) => p.id === selectedPartnerId) || allProfiles[1];
 
   const initialInput =
     preset === 'coffee_chat' && targetProfile
@@ -38,12 +69,35 @@ export function MessagesClient() {
 
   const [inputValue, setInputValue] = useState(initialInput);
 
-  const activeConversation =
-    MOCK_PROFILES.find((p) => p.id === selectedPartnerId) ?? initialPartner;
+  const activeConversation = targetProfile;
+
+  // Fetch historical messages from Supabase
+  useEffect(() => {
+    if (isUsingMockData() || !user) return;
+
+    const fetchMessages = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('messages')
+          .select('*')
+          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .order('created_at', { ascending: true });
+
+        if (data && data.length > 0) {
+          setMessages(data as unknown as Message[]);
+        }
+      } catch (err) {
+        console.warn('Could not load message history:', err);
+      }
+    };
+
+    fetchMessages();
+  }, [user]);
 
   // Supabase Realtime subscription when live keys are active
   useEffect(() => {
-    if (isUsingMockData()) return;
+    if (isUsingMockData() || !user) return;
 
     try {
       const supabase = createClient();
@@ -59,8 +113,8 @@ export function MessagesClient() {
           (payload) => {
             const newRow = payload.new as Message;
             if (
-              newRow.receiver_id === currentUserId ||
-              newRow.sender_id === currentUserId
+              newRow.receiver_id === user.id ||
+              newRow.sender_id === user.id
             ) {
               setMessages((prev) => {
                 if (prev.some((m) => m.id === newRow.id)) return prev;
@@ -77,10 +131,10 @@ export function MessagesClient() {
     } catch (err) {
       console.warn('Realtime subscription error:', err);
     }
-  }, [currentUserId]);
+  }, [user]);
 
   // Derive conversations list
-  const conversations = MOCK_PROFILES.filter((p) => p.id !== currentUserId);
+  const conversations = allProfiles.filter((p) => p.id !== currentUserId);
 
   // Messages for active conversation
   const threadMessages = activeConversation
@@ -110,11 +164,11 @@ export function MessagesClient() {
     setMessages((prev) => [...prev, newMessage]);
     setInputValue('');
 
-    if (!isUsingMockData()) {
+    if (!isUsingMockData() && user) {
       try {
         const supabase = createClient();
         await supabase.from('messages').insert({
-          sender_id: currentUserId,
+          sender_id: user.id,
           receiver_id: activeConversation.id,
           content,
         });

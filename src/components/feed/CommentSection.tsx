@@ -4,7 +4,7 @@
 // ============================================================
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { VerifiedBadge } from '@/components/ui/Badge';
@@ -33,17 +33,66 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
 
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const currentUser = profile || MOCK_PROFILES[0];
+  const currentUserId = user?.id || currentUser.id;
+
+  // Load real comments from Supabase if active
+  useEffect(() => {
+    if (isUsingMockData()) return;
+
+    const fetchComments = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('comments')
+          .select('*, author:profiles(*)')
+          .eq('post_id', postId)
+          .order('created_at', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          const topComments: Comment[] = [];
+          const replyMap = new Map<string, Comment[]>();
+
+          data.forEach((item) => {
+            const c = { ...item, replies: [] } as unknown as Comment;
+            if (c.parent_comment_id) {
+              const existing = replyMap.get(c.parent_comment_id) || [];
+              existing.push(c);
+              replyMap.set(c.parent_comment_id, existing);
+            } else {
+              topComments.push(c);
+            }
+          });
+
+          topComments.forEach((tc) => {
+            tc.replies = replyMap.get(tc.id) || [];
+          });
+
+          setComments(topComments);
+        }
+      } catch (err) {
+        console.warn('Could not load live comments:', err);
+      }
+    };
+
+    fetchComments();
+  }, [postId]);
 
   const handleAddTopComment = async () => {
     if (!newCommentText.trim()) return;
+
+    if (!isUsingMockData() && !user) {
+      alert('Please sign in to comment on posts.');
+      window.location.href = '/login';
+      return;
+    }
 
     const content = newCommentText.trim();
     const newComment: Comment = {
       id: generateId('comment'),
       post_id: postId,
-      author_id: currentUser.id,
+      author_id: currentUserId,
       parent_comment_id: null,
       content_markdown: content,
       created_at: new Date().toISOString(),
@@ -54,15 +103,27 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
     setComments((prev) => [...prev, newComment]);
     setNewCommentText('');
 
-    if (!isUsingMockData()) {
+    if (!isUsingMockData() && user) {
       try {
         const supabase = createClient();
-        await supabase.from('comments').insert({
-          post_id: postId,
-          author_id: currentUser.id,
-          parent_comment_id: null,
-          content_markdown: content,
-        });
+        const { data: dbComment } = await supabase
+          .from('comments')
+          .insert({
+            post_id: postId,
+            author_id: user.id,
+            parent_comment_id: null,
+            content_markdown: content,
+          })
+          .select('*, author:profiles(*)')
+          .single();
+
+        if (dbComment) {
+          setComments((prev) =>
+            prev.map((c) =>
+              c.id === newComment.id ? ({ ...dbComment, replies: [] } as unknown as Comment) : c
+            )
+          );
+        }
       } catch (err) {
         console.error('Comment insertion error:', err);
       }
@@ -72,11 +133,17 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
   const handleAddReply = async (parentId: string) => {
     if (!replyText.trim()) return;
 
+    if (!isUsingMockData() && !user) {
+      alert('Please sign in to reply to comments.');
+      window.location.href = '/login';
+      return;
+    }
+
     const content = replyText.trim();
     const newReply: Comment = {
       id: generateId('reply'),
       post_id: postId,
-      author_id: currentUser.id,
+      author_id: currentUserId,
       parent_comment_id: parentId,
       content_markdown: content,
       created_at: new Date().toISOString(),
@@ -99,12 +166,12 @@ export function CommentSection({ postId, initialComments }: CommentSectionProps)
     setReplyingToId(null);
     setReplyText('');
 
-    if (!isUsingMockData()) {
+    if (!isUsingMockData() && user) {
       try {
         const supabase = createClient();
         await supabase.from('comments').insert({
           post_id: postId,
-          author_id: currentUser.id,
+          author_id: user.id,
           parent_comment_id: parentId,
           content_markdown: content,
         });
