@@ -233,11 +233,13 @@ export function PostComposer({ onPost, defaultForumId }: PostComposerProps) {
             onChange={(e) => setForumId(e.target.value)}
             className="appearance-none text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1.5 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
-            {forums.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
+            {forums
+              .filter((f) => f.slug !== 'team-updates' && f.id !== '77777777-7777-7777-7777-777777777777')
+              .map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
           </select>
           <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
         </div>

@@ -5,7 +5,7 @@
 // ============================================================
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
@@ -67,16 +67,26 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Social graph state (Follow & Mute)
+  // Social graph state (Follow & Mute) - 100% Real Supabase Data
   const initialFollowing = (user?.user_metadata?.following as string[]) || [];
   const initialMuted = (user?.user_metadata?.muted as string[]) || [];
   const [isFollowing, setIsFollowing] = useState(initialFollowing.includes(initialProfile.id));
   const [isMuted, setIsMuted] = useState(initialMuted.includes(initialProfile.id));
-  const [followersCount, setFollowersCount] = useState(
-    Math.max(1, (initialProfile.skills_offered?.length || 1) * 3 + 7)
-  );
-  const [followingCount] = useState(14);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [optionsMenuOpen, setOptionsMenuOpen] = useState(false);
+
+  // Fetch real followers and following count from database
+  useEffect(() => {
+    fetch(`/api/profile/${initialProfile.id}/follow`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.followersCount !== undefined) setFollowersCount(d.followersCount);
+        if (d.followingCount !== undefined) setFollowingCount(d.followingCount);
+        if (d.isFollowing !== undefined) setIsFollowing(d.isFollowing);
+      })
+      .catch(() => {});
+  }, [initialProfile.id, user]);
 
   // Edit form state
   const [username, setUsername] = useState(
@@ -139,23 +149,26 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
       return;
     }
 
+    const nextAction = isFollowing ? 'unfollow' : 'follow';
     const nextState = !isFollowing;
     setIsFollowing(nextState);
     setFollowersCount((c) => (nextState ? c + 1 : Math.max(0, c - 1)));
 
     try {
-      const supabase = createClient();
-      const currentList: string[] = (user.user_metadata?.following as string[]) || [];
-      const updatedList = nextState
-        ? Array.from(new Set([...currentList, initialProfile.id]))
-        : currentList.filter((id) => id !== initialProfile.id);
-
-      await supabase.auth.updateUser({
-        data: { following: updatedList },
+      const res = await fetch(`/api/profile/${initialProfile.id}/follow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: nextAction }),
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.followersCount !== undefined) setFollowersCount(data.followersCount);
+        if (data.followingCount !== undefined) setFollowingCount(data.followingCount);
+      }
     } catch {
       // rollback
       setIsFollowing(!nextState);
+      setFollowersCount((c) => (nextState ? Math.max(0, c - 1) : c + 1));
     }
   };
 

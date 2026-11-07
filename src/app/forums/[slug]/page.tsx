@@ -2,7 +2,7 @@
 // /forums/[slug] – Forum page (Server Component)
 // Live Supabase integration with zero mock data
 // ============================================================
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { FeedClient } from '@/components/feed/FeedClient';
 import { Badge } from '@/components/ui/Badge';
@@ -18,6 +18,7 @@ interface ForumPageProps {
 
 export async function generateMetadata({ params }: ForumPageProps): Promise<Metadata> {
   const { slug } = await params;
+  if (slug === 'team-updates') return { title: 'UniCore Team Updates & Releases | UniCore' };
   const localForum = OFFICIAL_FORUMS.find((f) => f.slug === slug);
   if (!localForum) return { title: 'Forum Not Found | UniCore' };
   return { title: `${localForum.name} | UniCore`, description: localForum.description ?? undefined };
@@ -25,6 +26,9 @@ export async function generateMetadata({ params }: ForumPageProps): Promise<Meta
 
 export default async function ForumPage({ params }: ForumPageProps) {
   const { slug } = await params;
+  if (slug === 'team-updates') {
+    redirect('/updates');
+  }
 
   let forum = OFFICIAL_FORUMS.find((f) => f.slug === slug);
   let posts: Post[] = [];
