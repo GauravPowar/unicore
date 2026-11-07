@@ -16,6 +16,7 @@ import { CommentSection } from '@/components/feed/CommentSection';
 import { POST_TYPE_CONFIG, formatRelativeDate, cn } from '@/lib/utils';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
+import { ReportModal } from '@/components/ui/ReportModal';
 import {
   ArrowUp,
   MessageSquare,
@@ -27,6 +28,7 @@ import {
   Trash2,
   X,
   ExternalLink,
+  Flag,
 } from 'lucide-react';
 import type { Post, Comment, PostType } from '@/types';
 
@@ -87,6 +89,7 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Edit form state
   const [editTitle, setEditTitle] = useState(currentPost.title || '');
@@ -343,43 +346,60 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
           {typeConfig.label}
         </span>
 
-        {/* Author 3-dot dropdown menu */}
-        {isAuthor && (
-          <div className="relative shrink-0" ref={menuRef}>
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Post options"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
+        {/* Post Options Dropdown Menu (Edit/Delete for author, Report for community) */}
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Post options"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
 
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-1 z-20 animate-in fade-in zoom-in-95 duration-100">
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-1 z-20 animate-in fade-in zoom-in-95 duration-100">
+              {isAuthor ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setIsEditing(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-brand-500" />
+                    Edit Post
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleDeletePost();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Post
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setMenuOpen(false);
-                    setIsEditing(true);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                  <Pencil className="w-3.5 h-3.5 text-brand-500" />
-                  Edit Post
-                </button>
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    handleDeletePost();
+                    setShowReportModal(true);
                   }}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Delete Post
+                  <Flag className="w-3.5 h-3.5" />
+                  Report Post
                 </button>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Forum tag */}
@@ -599,6 +619,19 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
       {/* Nested Comments View */}
       {showComments && (
         <CommentSection postId={currentPost.id} initialComments={initialComments} />
+      )}
+
+      {/* Report Modal */}
+      {author && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedUserId={author.id}
+          targetType="post"
+          targetId={currentPost.id}
+          contentSnippet={currentPost.title || currentPost.content_markdown}
+          reportedUserName={author.full_name}
+        />
       )}
     </article>
   );

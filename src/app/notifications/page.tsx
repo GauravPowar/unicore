@@ -15,6 +15,11 @@ import { Avatar } from '@/components/ui/Avatar';
 import { VerifiedBadge } from '@/components/ui/Badge';
 import { formatRelativeDate } from '@/lib/utils';
 import {
+  isNotificationSupported,
+  getNotificationPermission,
+  requestNotificationPermission,
+} from '@/lib/webNotifications';
+import {
   Bell,
   MessageSquare,
   UserPlus,
@@ -51,6 +56,13 @@ export default function NotificationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [readIds, setReadIds] = useState<string[]>([]);
   const [acceptedPartnerIds, setAcceptedPartnerIds] = useState<string[]>([]);
+  const [notifPermission, setNotifPermission] = useState<string>('default');
+
+  useEffect(() => {
+    if (isNotificationSupported()) {
+      setNotifPermission(getNotificationPermission());
+    }
+  }, []);
 
   // Load read status from localStorage
   useEffect(() => {
@@ -374,6 +386,46 @@ export default function NotificationsPage() {
           </button>
         )}
       </div>
+
+      {/* Desktop & Mobile Native Alerts Banner */}
+      {isNotificationSupported() && (
+        <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-xl ${
+                notifPermission === 'granted'
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400'
+                  : 'bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-400'
+              }`}
+            >
+              <Bell className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                {notifPermission === 'granted'
+                  ? 'Desktop & Mobile Alerts Active'
+                  : 'Enable Desktop & Mobile Push Alerts'}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {notifPermission === 'granted'
+                  ? 'You will receive instant system notifications when peers send messages or requests.'
+                  : 'Get alerted even when UniCore is running in a background tab or on mobile.'}
+              </p>
+            </div>
+          </div>
+          {notifPermission !== 'granted' && (
+            <button
+              onClick={async () => {
+                const res = await requestNotificationPermission();
+                setNotifPermission(res);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 shrink-0 transition-colors shadow-xs"
+            >
+              Enable Alerts
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800 pb-2 overflow-x-auto">

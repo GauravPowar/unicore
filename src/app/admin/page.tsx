@@ -67,7 +67,7 @@ interface EnrichedUser {
   created_at: string;
 }
 
-type AdminTab = 'overview' | 'users' | 'content' | 'broadcast' | 'forums';
+type AdminTab = 'overview' | 'users' | 'content' | 'broadcast' | 'forums' | 'reports';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -84,6 +84,7 @@ export default function AdminDashboardPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [recentProfiles, setRecentProfiles] = useState<Profile[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
 
   // Search & filter states
   const [userSearch, setUserSearch] = useState('');
@@ -135,10 +136,11 @@ export default function AdminDashboardPage() {
   const loadDashboardData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const [metricsRes, usersRes, contentRes] = await Promise.all([
+      const [metricsRes, usersRes, contentRes, reportsRes] = await Promise.all([
         fetch('/api/admin/metrics'),
         fetch('/api/admin/users'),
         fetch('/api/admin/content'),
+        fetch('/api/admin/reports'),
       ]);
 
       if (metricsRes.ok) {
@@ -156,6 +158,11 @@ export default function AdminDashboardPage() {
         const c = await contentRes.json();
         setPosts(c.posts || []);
         setComments(c.comments || []);
+      }
+
+      if (reportsRes.ok) {
+        const r = await reportsRes.json();
+        setReports(r.reports || []);
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -318,6 +325,23 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Dismiss a user report
+  const handleDismissReport = async (reportId: string, reportedUserId: string) => {
+    try {
+      const res = await fetch('/api/admin/reports', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId, reportedUserId, action: 'dismiss' }),
+      });
+      if (res.ok) {
+        setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status: 'dismissed' } : r)));
+        showToast('Report dismissed as reviewed');
+      }
+    } catch (err) {
+      console.error('Error dismissing report:', err);
+    }
+  };
+
   // 6. Admin Sign Out
   const handleSignOutAdmin = async () => {
     try {
@@ -442,7 +466,8 @@ export default function AdminDashboardPage() {
         {[
           { id: 'overview', label: 'Overview & Metrics', icon: Activity },
           { id: 'users', label: `Researchers (${users.length})`, icon: Users },
-          { id: 'content', label: `Content Moderation (${posts.length})`, icon: Shield },
+          { id: 'reports', label: `Moderation Queue (${reports.filter((r) => r.status === 'pending').length})`, icon: AlertTriangle },
+          { id: 'content', label: `Content (${posts.length})`, icon: Shield },
           { id: 'broadcast', label: 'Team Broadcasts', icon: Radio },
           { id: 'forums', label: `Forums (${metrics?.totalForums || 0})`, icon: FolderTree },
         ].map((tab) => {
@@ -768,6 +793,141 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── TAB: MODERATION QUEUE & REPORTS ───────────────── */}
+      {activeTab === 'reports' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                Community Reports &amp; Abuse Moderation
+              </h3>
+              <p className="text-xs text-slate-500">
+                Review flagged messages, reported posts, and harassment claims filed by researchers.
+              </p>
+            </div>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-800">
+              {reports.filter((r) => r.status === 'pending').length} Pending
+            </span>
+          </div>
+
+          {reports.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center text-slate-400 space-y-2">
+              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto" />
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Moderation Queue is Clear
+              </h4>
+              <p className="text-xs text-slate-500">
+                Zero active abuse or harassment reports pending review.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {reports.map((report) => (
+                <div
+                  key={report.id}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                        {report.target_type}
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200 capitalize">
+                        {report.category?.replace('_', ' ')}
+                      </span>
+                      <span className="text-xs text-slate-400">·</span>
+                      <span className="text-[11px] text-slate-400">
+                        {formatRelativeDate(report.created_at)}
+                      </span>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          report.status === 'pending'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        }`}
+                      >
+                        {report.status}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {report.status === 'pending' && (
+                        <button
+                          onClick={() => handleDismissReport(report.id, report.reported_user_id)}
+                          className="px-2.5 py-1 rounded-lg text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium transition-colors"
+                        >
+                          Dismiss
+                        </button>
+                      )}
+
+                      {report.target_type === 'post' && (
+                        <button
+                          onClick={() => handleDeletePost(report.target_id)}
+                          className="px-2.5 py-1 rounded-lg text-xs bg-red-50 hover:bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-300 font-medium transition-colors border border-red-200 dark:border-red-800"
+                        >
+                          Purge Post
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDeleteUser(report.reported_user_id, report.reportedUser?.name || 'User')}
+                        className="p-1 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                        title="Ban / Delete Researcher Account"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                        Reported Researcher
+                      </span>
+                      <p className="font-semibold text-slate-900 dark:text-white">
+                        {report.reportedUser?.name}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        {report.reportedUser?.email || report.reported_user_id}
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                        Filed By
+                      </span>
+                      <p className="font-semibold text-slate-900 dark:text-white">
+                        {report.reporter?.name || 'Anonymous Researcher'}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        ID: {report.reporter_id.slice(0, 12)}...
+                      </p>
+                    </div>
+                  </div>
+
+                  {report.content_snippet && (
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                      <span className="text-[10px] font-bold text-slate-400 block mb-0.5">
+                        Reported Content Snippet:
+                      </span>
+                      <p className="italic">&ldquo;{report.content_snippet}&rdquo;</p>
+                    </div>
+                  )}
+
+                  {report.details && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">Context:</span>{' '}
+                      {report.details}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -15,12 +15,25 @@ import { VerifiedBadge } from '@/components/ui/Badge';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
 import { formatRelativeDate, createClientId, cn } from '@/lib/utils';
+import { compressImage } from '@/lib/imageCompression';
+import { screenContent } from '@/lib/moderation';
+import {
+  showWebNotification,
+  requestNotificationPermission,
+  getNotificationPermission,
+  isNotificationSupported,
+} from '@/lib/webNotifications';
+import { GifPicker } from '@/components/ui/GifPicker';
+import { ReportModal } from '@/components/ui/ReportModal';
 import {
   Send,
   MessageSquare,
   Coffee,
   Lock,
   Paperclip,
+  Camera,
+  Flag,
+  Bell,
   X,
   Check,
   CheckCheck,
@@ -60,6 +73,33 @@ export function MessagesClient() {
   const [attachedImageUrl, setAttachedImageUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isAcceptingRequest, setIsAcceptingRequest] = useState(false);
+
+  // Camera & GIF picker state
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Content moderation & reporting state
+  const [reportTarget, setReportTarget] = useState<{
+    reportedUserId: string;
+    targetType: 'message' | 'post';
+    targetId: string;
+    contentSnippet?: string;
+    reportedUserName?: string;
+  } | null>(null);
+
+  // Web notification permission state
+  const [notifPermission, setNotifPermission] = useState<string>('default');
+
+  useEffect(() => {
+    if (isNotificationSupported()) {
+      setNotifPermission(getNotificationPermission());
+    }
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    const perm = await requestNotificationPermission();
+    setNotifPermission(perm);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -151,6 +191,20 @@ export function MessagesClient() {
                 if (prev.some((m) => m.id === newRow.id)) return prev;
                 return [...prev, newRow];
               });
+            }
+
+            // Trigger native Desktop/Mobile Web Notification
+            if (newRow.receiver_id === user.id && typeof document !== 'undefined') {
+              if (document.visibilityState === 'hidden' || selectedPartnerId !== newRow.sender_id) {
+                const sender = allProfiles.find((p) => p.id === newRow.sender_id);
+                showWebNotification({
+                  title: `💬 Message from ${sender?.full_name || 'Researcher'}`,
+                  body: newRow.content || 'Sent an attachment',
+                  icon: sender?.avatar_url || '/favicon.ico',
+                  url: `/messages?to=${newRow.sender_id}`,
+                  tag: `unicore-msg-${newRow.sender_id}`,
+                });
+              }
             }
           }
         )
@@ -356,15 +410,18 @@ export function MessagesClient() {
     }
   };
 
-  // Upload an image attachment via /api/upload
+  // Upload an image attachment via /api/upload (compressed with HTML5 canvas to WebP)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploadingImage(true);
     try {
+      // Compress smartphone photo/camera capture to WebP (saves 90% Supabase storage)
+      const compressed = await compressImage(file, { maxWidth: 1600, quality: 0.82 });
+
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed);
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -384,14 +441,30 @@ export function MessagesClient() {
       alert('Error uploading attachment');
     } finally {
       setIsUploadingImage(false);
+      // Reset input value so same file can be selected again
+      e.target.value = '';
     }
   };
 
-  // Send message
+  // Send message with automated moderation
   const handleSendMessage = async () => {
     if ((!inputValue.trim() && !attachedImageUrl) || !activeConversation || !user || !profile) return;
 
     const content = inputValue.trim();
+
+    // Automated content screening for harassment, scam, or abusive language
+    if (content) {
+      const modResult = screenContent(content);
+      if (!modResult.isClean) {
+        alert(
+          `Your message was flagged by community safety filters:\n• ${modResult.reasons.join(
+            '\n• '
+          )}\n\nPlease ensure direct messages remain professional and respectful.`
+        );
+        return;
+      }
+    }
+
     const media_url = attachedImageUrl;
     const tempId = createClientId('msg');
 
@@ -701,6 +774,22 @@ export function MessagesClient() {
             </div>
           </div>
 
+          {/* Desktop/Mobile Notification Permission Banner */}
+          {notifPermission === 'default' && (
+            <div className="bg-brand-50 dark:bg-brand-950/40 px-4 py-2 border-b border-brand-200/60 dark:border-brand-900/40 flex items-center justify-between text-xs text-brand-800 dark:text-brand-300">
+              <div className="flex items-center gap-2">
+                <Bell className="w-3.5 h-3.5 text-brand-600 animate-bounce" />
+                <span>Get real-time desktop &amp; mobile alerts for incoming messages</span>
+              </div>
+              <button
+                onClick={handleEnableNotifications}
+                className="px-2.5 py-1 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 text-[11px] transition-colors shadow-xs"
+              >
+                Enable Alerts
+              </button>
+            </div>
+          )}
+
           {/* Messages display */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             {threadMessages.length === 0 ? (
@@ -768,9 +857,27 @@ export function MessagesClient() {
                           )}
                         </div>
                       ) : (
-                        <span className="block text-[10px] text-slate-400 mt-1 select-none">
-                          {formatRelativeDate(msg.created_at)}
-                        </span>
+                        <div className="flex items-center justify-between gap-2 mt-1 select-none">
+                          <span className="text-[10px] text-slate-400">
+                            {formatRelativeDate(msg.created_at)}
+                          </span>
+                          <button
+                            onClick={() =>
+                              setReportTarget({
+                                reportedUserId: activeConversation.id,
+                                targetType: 'message',
+                                targetId: msg.id,
+                                contentSnippet: msg.content,
+                                reportedUserName: activeConversation.full_name,
+                              })
+                            }
+                            className="text-[10px] text-slate-400 hover:text-red-500 opacity-60 hover:opacity-100 transition-opacity flex items-center gap-0.5"
+                            title="Report message to moderation"
+                          >
+                            <Flag className="w-2.5 h-2.5" />
+                            <span>Report</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -840,7 +947,7 @@ export function MessagesClient() {
               )}
 
               <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 bg-white dark:bg-slate-900">
-                {/* Hidden file input */}
+                {/* File input */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -849,17 +956,55 @@ export function MessagesClient() {
                   onChange={handleImageUpload}
                 />
 
-                {/* Attachment Button */}
+                {/* Camera input */}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+
+                {/* File Attachment Button */}
                 <Button
                   type="button"
                   variant="secondary"
                   size="md"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploadingImage}
-                  className="px-3 shrink-0 text-slate-500 hover:text-brand-600"
-                  title="Attach figure or lab gel"
+                  className="px-2.5 shrink-0 text-slate-500 hover:text-brand-600"
+                  title="Attach file, figure, or lab gel"
                 >
                   <Paperclip className="w-4 h-4" />
+                </Button>
+
+                {/* Camera Direct Capture Button */}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={() => cameraInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                  className="px-2.5 shrink-0 text-slate-500 hover:text-emerald-600"
+                  title="Take photo from camera / webcam"
+                >
+                  <Camera className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </Button>
+
+                {/* GIF Selector Button */}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setShowGifPicker(true)}
+                  disabled={isUploadingImage}
+                  className="px-2 shrink-0 text-slate-500 hover:text-brand-600"
+                  title="Insert animated GIF (0 bytes storage used)"
+                >
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+                    GIF
+                  </span>
                 </Button>
 
                 <input
@@ -894,6 +1039,28 @@ export function MessagesClient() {
           <MessageSquare className="w-10 h-10 text-slate-300 dark:text-slate-700" />
           <p>Select a researcher from the left to start a conversation or review requests.</p>
         </div>
+      )}
+
+      {/* GIF Picker Modal */}
+      <GifPicker
+        isOpen={showGifPicker}
+        onClose={() => setShowGifPicker(false)}
+        onSelectGif={(gifUrl) => {
+          setAttachedImageUrl(gifUrl);
+        }}
+      />
+
+      {/* Moderation / Abuse Report Modal */}
+      {reportTarget && (
+        <ReportModal
+          isOpen={Boolean(reportTarget)}
+          onClose={() => setReportTarget(null)}
+          reportedUserId={reportTarget.reportedUserId}
+          targetType={reportTarget.targetType}
+          targetId={reportTarget.targetId}
+          contentSnippet={reportTarget.contentSnippet}
+          reportedUserName={reportTarget.reportedUserName}
+        />
       )}
     </div>
   );
