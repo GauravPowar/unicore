@@ -49,63 +49,63 @@
 }
 
 /* Prose styling for Markdown content */
-.prose-unicore, .prose-researchsetu {
+.prose-researchsetu {
   @apply text-slate-800 dark:text-slate-200;
 }
 
-.prose-unicore h2, .prose-researchsetu h2 {
+.prose-researchsetu h2 {
   @apply text-xl font-semibold mt-5 mb-2 text-slate-900 dark:text-white;
 }
 
-.prose-unicore h3, .prose-researchsetu h3 {
+.prose-researchsetu h3 {
   @apply text-base font-semibold mt-4 mb-1 text-slate-800 dark:text-slate-100;
 }
 
-.prose-unicore p, .prose-researchsetu p {
+.prose-researchsetu p {
   @apply mb-3 leading-relaxed;
 }
 
-.prose-unicore ul, .prose-unicore ol, .prose-researchsetu ul, .prose-researchsetu ol {
+.prose-researchsetu ul, .prose-researchsetu ol {
   @apply mb-3 pl-5;
 }
 
-.prose-unicore li, .prose-researchsetu li {
+.prose-researchsetu li {
   @apply mb-1;
 }
 
-.prose-unicore ul, .prose-researchsetu ul {
+.prose-researchsetu ul {
   @apply list-disc;
 }
 
-.prose-unicore ol, .prose-researchsetu ol {
+.prose-researchsetu ol {
   @apply list-decimal;
 }
 
-.prose-unicore code, .prose-researchsetu code {
+.prose-researchsetu code {
   @apply bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400 px-1 py-0.5 rounded text-sm font-mono;
 }
 
-.prose-unicore pre, .prose-researchsetu pre {
+.prose-researchsetu pre {
   @apply bg-slate-900 dark:bg-slate-950 text-slate-100 p-4 rounded-lg overflow-x-auto text-sm mb-3;
 }
 
-.prose-unicore pre code, .prose-researchsetu pre code {
+.prose-researchsetu pre code {
   @apply bg-transparent text-inherit px-0 py-0;
 }
 
-.prose-unicore blockquote, .prose-researchsetu blockquote {
+.prose-researchsetu blockquote {
   @apply border-l-4 border-brand-400 pl-4 italic text-slate-600 dark:text-slate-400 my-3;
 }
 
-.prose-unicore strong, .prose-researchsetu strong {
+.prose-researchsetu strong {
   @apply font-semibold text-slate-900 dark:text-white;
 }
 
-.prose-unicore em, .prose-researchsetu em {
+.prose-researchsetu em {
   @apply italic;
 }
 
-.prose-unicore a, .prose-researchsetu a {
+.prose-researchsetu a {
   @apply text-brand-600 dark:text-brand-400 underline underline-offset-2;
 }
 

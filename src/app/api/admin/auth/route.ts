@@ -30,8 +30,7 @@ export async function POST(req: NextRequest) {
     const trimmed = passkey.trim();
     const isValid =
       trimmed === ADMIN_SECRET_KEY.trim() ||
-      trimmed === 'researchsetu-admin-2025' ||
-      trimmed === 'unicore-admin-2025';
+      trimmed === 'researchsetu-admin-2025';
 
     if (!isValid) {
       return NextResponse.json({ error: 'Invalid admin passkey' }, { status: 401 });

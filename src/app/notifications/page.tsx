@@ -67,9 +67,7 @@ export default function NotificationsPage() {
   // Load read status from localStorage
   useEffect(() => {
     try {
-      const stored =
-        localStorage.getItem('researchsetu_read_notifs') ||
-        localStorage.getItem('unicore_read_notifs');
+      const stored = localStorage.getItem('researchsetu_read_notifs');
       if (stored) {
         setReadIds(JSON.parse(stored));
       }
@@ -314,7 +312,6 @@ export default function NotificationsPage() {
     setReadIds(allIds);
     try {
       localStorage.setItem('researchsetu_read_notifs', JSON.stringify(allIds));
-      localStorage.setItem('unicore_read_notifs', JSON.stringify(allIds));
     } catch {
       // ignore
     }

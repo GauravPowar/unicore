@@ -43,8 +43,13 @@ export function ResearcherCard({ profile }: ResearcherCardProps) {
             )}
           </div>
           {profile.institution && (
-            <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mt-0.5 truncate">
-              {profile.institution}
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mt-0.5 truncate flex items-center gap-1.5">
+              <span>{profile.institution}</span>
+              {profile.email_domain && (
+                <span className="text-[10px] font-mono text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-1.5 py-0.5 rounded border border-brand-200/60 dark:border-brand-800/40">
+                  @{profile.email_domain}
+                </span>
+              )}
             </p>
           )}
           {profile.department && (

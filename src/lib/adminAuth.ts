@@ -13,7 +13,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export const ADMIN_SECRET_KEY =
   process.env.ADMIN_SECRET_KEY ||
   process.env.RESEARCHSETU_ADMIN_KEY ||
-  process.env.UNICORE_ADMIN_KEY ||
   'researchsetu-admin-2025';
 
 export const ADMIN_COOKIE_NAME = 'researchsetu_admin_session';
@@ -77,7 +76,7 @@ export interface AdminAuthResult {
 /**
  * Decoupled Admin Verification helper for Next.js API Routes and Server Components.
  * Checks in order:
- * 1. Admin HttpOnly Cookie ('unicore_admin_session')
+ * 1. Admin HttpOnly Cookie ('researchsetu_admin_session')
  * 2. Request header ('x-admin-key' matching ADMIN_SECRET_KEY)
  * 3. Supabase Auth session (if user has user_metadata.is_admin === true or role === 'admin')
  * Notice: Zero personal IDs or emails hardcoded!
@@ -94,9 +93,7 @@ export async function verifyAdminRequest(req?: NextRequest): Promise<AdminAuthRe
   // 2. Check Cookie
   try {
     const cookieStore = await cookies();
-    const token =
-      cookieStore.get(ADMIN_COOKIE_NAME)?.value ||
-      cookieStore.get('unicore_admin_session')?.value;
+    const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
     if (token && verifyAdminToken(token)) {
       return { isAdmin: true, method: 'cookie' };
     }

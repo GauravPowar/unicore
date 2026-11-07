@@ -144,3 +144,4 @@ export function getProfileUrl(
   }
   return profileOrUser.id ? `/profile/${profileOrUser.id}` : '/directory';
 }
+

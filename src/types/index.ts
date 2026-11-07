@@ -43,6 +43,7 @@ export interface Profile {
   skills_offered: string[];
   skills_needed: string[];
   links?: ProfileLinks | null;
+  email_domain?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -110,6 +111,7 @@ export interface PostComposerValues {
 export interface DirectoryFilters {
   search: string;
   institution: string;
+  email_domain?: string;
   collab_status: CollabStatus | '';
   skill_offered: string;
   skill_needed: string;

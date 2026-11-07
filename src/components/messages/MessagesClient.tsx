@@ -257,9 +257,6 @@ export function MessagesClient() {
         window.dispatchEvent(
           new CustomEvent('researchsetu:messages_read', { detail: { partnerId: activeConversation.id } })
         );
-        window.dispatchEvent(
-          new CustomEvent('unicore:messages_read', { detail: { partnerId: activeConversation.id } })
-        );
       }
 
       // 3. Persist to server via API

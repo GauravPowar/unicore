@@ -103,7 +103,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
     if (typeof window !== 'undefined') {
       window.addEventListener('researchsetu:messages_read', handleReadEvent);
-      window.addEventListener('unicore:messages_read', handleReadEvent);
     }
 
     // Realtime listener for message events
@@ -123,7 +122,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return () => {
         if (typeof window !== 'undefined') {
           window.removeEventListener('researchsetu:messages_read', handleReadEvent);
-          window.removeEventListener('unicore:messages_read', handleReadEvent);
         }
         supabase.removeChannel(channel);
       };
@@ -131,7 +129,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return () => {
         if (typeof window !== 'undefined') {
           window.removeEventListener('researchsetu:messages_read', handleReadEvent);
-          window.removeEventListener('unicore:messages_read', handleReadEvent);
         }
       };
     }

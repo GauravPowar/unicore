@@ -92,10 +92,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
   useEffect(() => {
     const loadSaved = () => {
       try {
-        const raw =
-          localStorage.getItem('researchsetu_saved_posts') ||
-          localStorage.getItem('unicore_saved_posts') ||
-          '[]';
+        const raw = localStorage.getItem('researchsetu_saved_posts') || '[]';
         const stored = JSON.parse(raw);
         if (Array.isArray(stored)) {
           setSavedPostIds(stored);
@@ -105,10 +102,8 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
 
     loadSaved();
     window.addEventListener('researchsetu_bookmarks_updated', loadSaved);
-    window.addEventListener('unicore_bookmarks_updated', loadSaved);
     return () => {
       window.removeEventListener('researchsetu_bookmarks_updated', loadSaved);
-      window.removeEventListener('unicore_bookmarks_updated', loadSaved);
     };
   }, []);
 

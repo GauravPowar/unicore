@@ -33,9 +33,12 @@ export default async function DirectoryPage() {
 
         profiles = dbProfiles.map((p) => {
           const authUser = userMap.get(p.id);
+          const emailParts = authUser?.email ? authUser.email.split('@') : [];
+          const domain = emailParts.length > 1 ? emailParts[1].toLowerCase().trim() : null;
           return {
             ...p,
             username: p.username || authUser?.user_metadata?.username || null,
+            email_domain: domain,
           } as Profile;
         });
       } catch {

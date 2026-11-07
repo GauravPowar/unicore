@@ -1,5 +1,5 @@
 -- =============================================================
--- UniCore – Initial Database Schema
+-- ResearchSetu – Initial Database Schema
 -- Migration: 001_initial_schema.sql
 -- =============================================================
 
