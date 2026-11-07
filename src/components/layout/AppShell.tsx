@@ -76,6 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!currentUser?.id) return;
+
     const fetchCounters = async () => {
       try {
         const supabase = createClient();
@@ -92,7 +93,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         // ignore
       }
     };
+
     fetchCounters();
+
+    // Listen for local read event
+    const handleReadEvent = () => {
+      fetchCounters();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('unicore:messages_read', handleReadEvent);
+    }
+
+    // Realtime listener for message events
+    try {
+      const supabase = createClient();
+      const channel = supabase
+        .channel('appshell:messages_counter')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'messages' },
+          () => {
+            fetchCounters();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('unicore:messages_read', handleReadEvent);
+        }
+        supabase.removeChannel(channel);
+      };
+    } catch {
+      return () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('unicore:messages_read', handleReadEvent);
+        }
+      };
+    }
   }, [currentUser?.id]);
 
   return (

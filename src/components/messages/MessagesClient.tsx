@@ -23,6 +23,7 @@ import {
   Paperclip,
   X,
   Check,
+  CheckCheck,
   Inbox,
   ShieldAlert,
   Search,
@@ -128,7 +129,7 @@ export function MessagesClient() {
     fetchMessages();
   }, [user]);
 
-  // Supabase Realtime subscription
+  // Supabase Realtime subscription (INSERT + UPDATE for live read receipts)
   useEffect(() => {
     if (!user) return;
 
@@ -153,6 +154,22 @@ export function MessagesClient() {
             }
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+          },
+          (payload) => {
+            const updatedRow = payload.new as Message;
+            if (updatedRow.receiver_id === user.id || updatedRow.sender_id === user.id) {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === updatedRow.id ? { ...m, is_read: updatedRow.is_read } : m))
+              );
+            }
+          }
+        )
         .subscribe();
 
       return () => {
@@ -164,6 +181,38 @@ export function MessagesClient() {
   }, [user]);
 
   const activeConversation = allProfiles.find((p) => p.id === selectedPartnerId) || null;
+
+  // Auto-mark incoming unread messages as read when viewing conversation
+  useEffect(() => {
+    if (!user || !activeConversation) return;
+
+    const unreadFromPartner = messages.filter(
+      (m) => m.receiver_id === user.id && m.sender_id === activeConversation.id && !m.is_read
+    );
+
+    if (unreadFromPartner.length > 0) {
+      // 1. Optimistic update in local state
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.receiver_id === user.id && m.sender_id === activeConversation.id ? { ...m, is_read: true } : m
+        )
+      );
+
+      // 2. Dispatch custom event so AppShell resets badge counter immediately
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('unicore:messages_read', { detail: { partnerId: activeConversation.id } })
+        );
+      }
+
+      // 3. Persist to server via API
+      fetch('/api/messages/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerId: activeConversation.id }),
+      }).catch((err) => console.warn('Failed to mark messages read:', err));
+    }
+  }, [user, activeConversation, messages]);
 
   // Auto-scroll messages to bottom
   useEffect(() => {
@@ -548,6 +597,10 @@ export function MessagesClient() {
                 )
                 .slice(-1)[0];
 
+              const unreadFromPerson = messages.filter(
+                (m) => m.sender_id === person.id && m.receiver_id === user.id && !m.is_read
+              ).length;
+
               const isSelected = activeConversation?.id === person.id;
 
               return (
@@ -569,11 +622,18 @@ export function MessagesClient() {
                         </p>
                         {person.is_verified_researcher && <VerifiedBadge />}
                       </div>
-                      {lastMsg && (
-                        <span className="text-[10px] text-slate-400 shrink-0 ml-1">
-                          {formatRelativeDate(lastMsg.created_at)}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                        {unreadFromPerson > 0 && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-brand-500 text-white">
+                            {unreadFromPerson}
+                          </span>
+                        )}
+                        {lastMsg && (
+                          <span className="text-[10px] text-slate-400">
+                            {formatRelativeDate(lastMsg.created_at)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       {person.institution || 'Indian Researcher'}
@@ -692,14 +752,26 @@ export function MessagesClient() {
 
                       <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
 
-                      <span
-                        className={cn(
-                          'block text-[10px] mt-1',
-                          isSent ? 'text-brand-100 text-right' : 'text-slate-400'
-                        )}
-                      >
-                        {formatRelativeDate(msg.created_at)}
-                      </span>
+                      {isSent ? (
+                        <div className="flex items-center justify-end gap-1.5 text-[10px] text-brand-100 mt-1 select-none">
+                          <span>{formatRelativeDate(msg.created_at)}</span>
+                          {msg.is_read ? (
+                            <span className="inline-flex items-center gap-0.5 text-white font-medium" title="Read by recipient">
+                              <CheckCheck className="w-3.5 h-3.5 text-white" />
+                              <span className="text-[9px]">Read</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 text-brand-200" title="Delivered">
+                              <Check className="w-3.5 h-3.5 text-brand-200" />
+                              <span className="text-[9px]">Sent</span>
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="block text-[10px] text-slate-400 mt-1 select-none">
+                          {formatRelativeDate(msg.created_at)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
