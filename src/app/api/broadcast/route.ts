@@ -16,7 +16,7 @@ export async function GET() {
 
     const { data: posts, error } = await admin
       .from('posts')
-      .select('*, author:profiles(*)')
+      .select('*, author:profiles!posts_author_id_fkey(*)')
       .eq('forum_id', BROADCAST_FORUM_ID)
       .order('created_at', { ascending: false });
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         media_urls: media_urls || [],
         post_type: 'thought',
       })
-      .select('*, author:profiles(*)')
+      .select('*, author:profiles!posts_author_id_fkey(*)')
       .single();
 
     if (insertError) {
@@ -87,3 +87,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

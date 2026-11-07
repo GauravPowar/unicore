@@ -237,7 +237,7 @@ export default function NotificationsPage() {
         // 4. Fetch official team broadcasts
         const { data: broadcasts } = await supabase
           .from('posts')
-          .select('id, title, content_markdown, created_at, author:profiles(*)')
+          .select('id, title, content_markdown, created_at, author:profiles!posts_author_id_fkey(*)')
           .eq('forum_id', '77777777-7777-7777-7777-777777777777')
           .order('created_at', { ascending: false })
           .limit(5);
