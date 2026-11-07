@@ -215,8 +215,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          {forums.map((forum) => {
-            const Icon = FORUM_ICONS[forum.slug] ?? BookOpen;
+          {forums
+            .filter((f) => f.slug !== 'team-updates' && f.id !== '77777777-7777-7777-7777-777777777777')
+            .map((forum) => {
+              const Icon = FORUM_ICONS[forum.slug] ?? BookOpen;
             const href = `/forums/${forum.slug}`;
             return (
               <Link
