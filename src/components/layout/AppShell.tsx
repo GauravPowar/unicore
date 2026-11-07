@@ -21,6 +21,7 @@ import {
   X,
   AtSign,
   Plus,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -34,6 +35,7 @@ import type { Forum } from '@/types';
 const PRIMARY_NAV = [
   { href: '/', label: 'Feed', icon: Home },
   { href: '/directory', label: 'Researchers', icon: Users },
+  { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/messages', label: 'Messages', icon: MessageSquare },
 ];
 

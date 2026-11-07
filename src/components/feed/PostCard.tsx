@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, VerifiedBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -37,6 +38,7 @@ interface PostCardProps {
 const POST_TYPES: PostType[] = ['thought', 'question', 'visual_abstract', 'collab_pitch'];
 
 export function PostCard({ post, compact = false, defaultShowComments = false }: PostCardProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const [currentPost, setCurrentPost] = useState<Post>(post);
   const author = currentPost.author;
@@ -62,6 +64,25 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
 
   const menuRef = useRef<HTMLDivElement>(null);
   const initialComments: Comment[] = [];
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('input') ||
+      target.closest('textarea') ||
+      target.closest('select') ||
+      target.closest('[role="button"]') ||
+      isEditing
+    ) {
+      return;
+    }
+
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith(`/post/${currentPost.id}`)) {
+      router.push(`/post/${currentPost.id}`);
+    }
+  };
 
   const isEdited =
     currentPost.updated_at &&
@@ -235,8 +256,10 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
   return (
     <article
       id={currentPost.id}
+      onClick={handleCardClick}
       className={cn(
         'bg-white dark:bg-slate-900 border rounded-xl p-5 transition-all scroll-mt-24 relative',
+        !defaultShowComments && 'cursor-pointer hover:border-brand-400 dark:hover:border-brand-600',
         isTargeted
           ? 'border-brand-500 ring-2 ring-brand-500/50 shadow-lg dark:ring-brand-400/40'
           : 'border-slate-200 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-700'
