@@ -60,4 +60,16 @@ export const OFFICIAL_FORUMS: Forum[] = [
     category: 'Open Science',
     created_at: '2026-01-01T00:00:00Z',
   },
+  {
+    id: '77777777-7777-7777-7777-777777777777',
+    slug: 'team-updates',
+    name: 'UniCore Team Updates',
+    description: 'Official broadcast channel for new platform features, releases, and announcements.',
+    category: 'Career & Academia',
+    created_at: '2026-01-01T00:00:00Z',
+  },
 ];
+
+export const ROOT_ADMIN_IDS = ['8d3cc26d-be9a-49ae-a394-b7a4914a8911'];
+export const ROOT_ADMIN_EMAILS = ['24078@iiserbpr.ac.in'];
+

@@ -1,7 +1,8 @@
 // ============================================================
 // MessagesClient – 1-on-1 Realtime DM UI with Message Requests
 // 100% Live Supabase PostgreSQL + Realtime (Zero Mock Data)
-// Modeled after Bluesky & modern social messaging architectures
+// Full support for incoming Message Requests, Accept/Decline,
+// and Image/Figure attachments via /api/upload
 // ============================================================
 'use client';
 
@@ -22,11 +23,12 @@ import {
   Paperclip,
   X,
   Check,
-  UserCheck,
   Inbox,
   ShieldAlert,
   Search,
   ExternalLink,
+  Clock,
+  UserCheck,
 } from 'lucide-react';
 import type { Message, Profile } from '@/types';
 
@@ -49,22 +51,31 @@ export function MessagesClient() {
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Persisted accept & ignore sets
+  const [acceptedList, setAcceptedList] = useState<string[]>([]);
+  const [ignoredList, setIgnoredList] = useState<string[]>([]);
+
   // Image attachment state
   const [attachedImageUrl, setAttachedImageUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isAcceptingRequest, setIsAcceptingRequest] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Accepted & ignored message requests from user metadata
-  const acceptedRequests = useMemo<string[]>(() => {
-    return (user?.user_metadata?.accepted_requests as string[]) || [];
-  }, [user?.user_metadata?.accepted_requests]);
+  // Load user's accepted & ignored list from server
+  useEffect(() => {
+    if (!user) return;
+    fetch('/api/messages/requests')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.accepted) setAcceptedList(d.accepted);
+        if (d.ignored) setIgnoredList(d.ignored);
+      })
+      .catch(() => {});
+  }, [user]);
 
-  const ignoredRequests = useMemo<string[]>(() => {
-    return (user?.user_metadata?.ignored_requests as string[]) || [];
-  }, [user?.user_metadata?.ignored_requests]);
-
-  // Load real registered researchers from Supabase
+  // Load registered researchers from Supabase
   useEffect(() => {
     if (!user) return;
 
@@ -154,12 +165,12 @@ export function MessagesClient() {
 
   const activeConversation = allProfiles.find((p) => p.id === selectedPartnerId) || null;
 
-  // Auto-scroll messages to bottom when updated
+  // Auto-scroll messages to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, selectedPartnerId]);
 
-  // Set preset message if requested
+  // Preset coffee chat message
   useEffect(() => {
     if (preset === 'coffee_chat' && activeConversation) {
       setInputValue(
@@ -176,7 +187,7 @@ export function MessagesClient() {
     const requests: Profile[] = [];
 
     allProfiles.forEach((person) => {
-      if (ignoredRequests.includes(person.id)) return;
+      if (ignoredList.includes(person.id)) return;
 
       const sentToPerson = messages.filter(
         (m) => m.sender_id === user.id && m.receiver_id === person.id
@@ -185,8 +196,7 @@ export function MessagesClient() {
         (m) => m.sender_id === person.id && m.receiver_id === user.id
       ).length;
 
-      // Has the current user already accepted this researcher?
-      const isExplicitlyAccepted = acceptedRequests.includes(person.id);
+      const isExplicitlyAccepted = acceptedList.includes(person.id);
 
       if (receivedFromPerson > 0 && sentToPerson === 0 && !isExplicitlyAccepted) {
         // Someone messaged current user first, and user has not replied/accepted yet
@@ -198,12 +208,20 @@ export function MessagesClient() {
     });
 
     return { directPartners: direct, requestPartners: requests };
-  }, [user, allProfiles, messages, acceptedRequests, ignoredRequests]);
+  }, [user, allProfiles, messages, acceptedList, ignoredList]);
 
-  // Check if active conversation is an incoming request
+  // Auto-switch to requests tab if user has pending requests and no direct conversation selected
+  useEffect(() => {
+    if (tabParam === 'requests') {
+      setActiveTab('requests');
+      if (toUserId) setSelectedPartnerId(toUserId);
+    }
+  }, [tabParam, toUserId]);
+
+  // Check if active conversation is an incoming request for the current user
   const isIncomingRequest = useMemo(() => {
     if (!user || !activeConversation) return false;
-    if (acceptedRequests.includes(activeConversation.id)) return false;
+    if (acceptedList.includes(activeConversation.id)) return false;
 
     const sentToPerson = messages.filter(
       (m) => m.sender_id === user.id && m.receiver_id === activeConversation.id
@@ -213,9 +231,9 @@ export function MessagesClient() {
     ).length;
 
     return receivedFromPerson > 0 && sentToPerson === 0;
-  }, [user, activeConversation, messages, acceptedRequests]);
+  }, [user, activeConversation, messages, acceptedList]);
 
-  // Check if current user sent a request that is still pending
+  // Check if active conversation is an outgoing request sent by current user
   const isOutgoingRequest = useMemo(() => {
     if (!user || !activeConversation) return false;
 
@@ -226,7 +244,7 @@ export function MessagesClient() {
       (m) => m.sender_id === activeConversation.id && m.receiver_id === user.id
     ).length;
 
-    return (sentToPerson > 0 && receivedFromPerson === 0) || isReqParam;
+    return (sentToPerson > 0 && receivedFromPerson === 0) || (sentToPerson === 0 && isReqParam);
   }, [user, activeConversation, messages, isReqParam]);
 
   // Filter partners by search query
@@ -239,17 +257,33 @@ export function MessagesClient() {
 
   // Accept a message request
   const handleAcceptRequest = async (partnerId: string) => {
-    if (!user) return;
+    if (!user || isAcceptingRequest) return;
+    setIsAcceptingRequest(true);
+
     try {
-      const supabase = createClient();
-      const updated = Array.from(new Set([...acceptedRequests, partnerId]));
-      await supabase.auth.updateUser({
-        data: { accepted_requests: updated },
+      // 1. Persist to server
+      const res = await fetch('/api/messages/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'accept', partnerId }),
       });
+
+      if (res.ok) {
+        setAcceptedList((prev) => Array.from(new Set([...prev, partnerId])));
+        setActiveTab('direct');
+        setSelectedPartnerId(partnerId);
+      } else {
+        // Fallback local update
+        setAcceptedList((prev) => Array.from(new Set([...prev, partnerId])));
+        setActiveTab('direct');
+        setSelectedPartnerId(partnerId);
+      }
+    } catch {
+      setAcceptedList((prev) => Array.from(new Set([...prev, partnerId])));
       setActiveTab('direct');
       setSelectedPartnerId(partnerId);
-    } catch (err) {
-      console.error('Error accepting request:', err);
+    } finally {
+      setIsAcceptingRequest(false);
     }
   };
 
@@ -260,14 +294,16 @@ export function MessagesClient() {
     if (!confirmed) return;
 
     try {
-      const supabase = createClient();
-      const updated = Array.from(new Set([...ignoredRequests, partnerId]));
-      await supabase.auth.updateUser({
-        data: { ignored_requests: updated },
+      await fetch('/api/messages/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'decline', partnerId }),
       });
+      setIgnoredList((prev) => Array.from(new Set([...prev, partnerId])));
       setSelectedPartnerId('');
-    } catch (err) {
-      console.error('Error ignoring request:', err);
+    } catch {
+      setIgnoredList((prev) => Array.from(new Set([...prev, partnerId])));
+      setSelectedPartnerId('');
     }
   };
 
@@ -326,17 +362,9 @@ export function MessagesClient() {
     setInputValue('');
     setAttachedImageUrl(null);
 
-    // If accepting an incoming request by replying, mark as accepted
+    // If answering an incoming request by typing a message, auto-accept
     if (isIncomingRequest) {
-      try {
-        const supabase = createClient();
-        const updated = Array.from(new Set([...acceptedRequests, activeConversation.id]));
-        await supabase.auth.updateUser({
-          data: { accepted_requests: updated },
-        });
-      } catch (err) {
-        console.warn('Could not auto-accept on reply:', err);
-      }
+      handleAcceptRequest(activeConversation.id);
     }
 
     try {
@@ -389,7 +417,7 @@ export function MessagesClient() {
           Direct Messages &amp; Requests
         </h2>
         <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
-          Sign in with your verified researcher account to send message requests, exchange data protocols, and connect across labs.
+          Sign in with your verified researcher email to send message requests, exchange data protocols, and connect across labs.
         </p>
         <div className="pt-3 flex justify-center gap-3">
           <Link href="/login">
@@ -423,6 +451,24 @@ export function MessagesClient() {
             </span>
           </div>
 
+          {/* Pending Requests Alert Banner */}
+          {requestPartners.length > 0 && activeTab === 'direct' && (
+            <button
+              onClick={() => setActiveTab('requests')}
+              className="w-full p-2.5 bg-saffron-50 dark:bg-saffron-950/40 border border-saffron-200 dark:border-saffron-900/50 rounded-xl text-left flex items-center justify-between gap-2 text-xs transition-all hover:bg-saffron-100/60"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <ShieldAlert className="w-4 h-4 text-saffron-600 shrink-0" />
+                <span className="font-semibold text-saffron-950 dark:text-saffron-200 truncate">
+                  {requestPartners.length} Pending Message Request{requestPartners.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <span className="text-[10px] bg-saffron-500 text-white font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                Review →
+              </span>
+            </button>
+          )}
+
           {/* Direct vs Requests Tab Switcher */}
           <div className="grid grid-cols-2 p-1 bg-slate-200/60 dark:bg-slate-800/80 rounded-xl text-xs font-medium">
             <button
@@ -449,7 +495,9 @@ export function MessagesClient() {
               <ShieldAlert className="w-3.5 h-3.5" />
               Requests
               {requestPartners.length > 0 && (
-                <span className="w-2 h-2 rounded-full bg-saffron-500 absolute top-1.5 right-3" />
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-saffron-500 text-white">
+                  {requestPartners.length}
+                </span>
               )}
             </button>
           </div>
@@ -478,14 +526,14 @@ export function MessagesClient() {
                   <ShieldAlert className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto" />
                   <p>No pending message requests.</p>
                   <p className="text-[11px] text-slate-500">
-                    When researchers outside your network contact you, their requests will appear here.
+                    When researchers outside your network reach out, their requests will appear here.
                   </p>
                 </>
               ) : (
                 <>
                   <p>No active conversations yet.</p>
                   <p className="text-[11px] text-slate-500">
-                    Find researchers in the directory or send a message request to begin.
+                    Find researchers in the directory to start chatting.
                   </p>
                 </>
               )}
@@ -536,7 +584,7 @@ export function MessagesClient() {
                       </p>
                     ) : (
                       <span className="inline-block text-[10px] text-brand-600 dark:text-brand-400 mt-1 font-medium">
-                        Start Message Request →
+                        Send Message Request →
                       </span>
                     )}
                   </div>
@@ -576,8 +624,8 @@ export function MessagesClient() {
 
             <div className="flex items-center gap-2">
               {isOutgoingRequest && (
-                <span className="text-[11px] font-mono bg-saffron-50 text-saffron-700 dark:bg-saffron-950/60 dark:text-saffron-300 border border-saffron-200 dark:border-saffron-900/40 px-2.5 py-1 rounded-full">
-                  Request Pending
+                <span className="text-[11px] font-mono bg-saffron-50 text-saffron-700 dark:bg-saffron-950/60 dark:text-saffron-300 border border-saffron-200 dark:border-saffron-900/40 px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> Request Sent
                 </span>
               )}
 
@@ -592,39 +640,6 @@ export function MessagesClient() {
               </Button>
             </div>
           </div>
-
-          {/* Incoming Request Banner (if recipient hasn't accepted yet) */}
-          {isIncomingRequest && (
-            <div className="bg-saffron-50/70 dark:bg-saffron-950/40 border-b border-saffron-200 dark:border-saffron-900/50 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <p className="text-xs font-semibold text-saffron-950 dark:text-saffron-200 flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4 text-saffron-600" />
-                  Message Request from {activeConversation.full_name}
-                </p>
-                <p className="text-[11px] text-saffron-800 dark:text-saffron-300/80">
-                  Accept this request to reply and enable continuous direct messaging.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => handleAcceptRequest(activeConversation.id)}
-                  className="gap-1 text-xs"
-                >
-                  <Check className="w-3.5 h-3.5" /> Accept Request
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleDeclineRequest(activeConversation.id)}
-                  className="text-xs text-red-600 dark:text-red-400 hover:bg-red-50"
-                >
-                  Decline
-                </Button>
-              </div>
-            </div>
-          )}
 
           {/* Messages display */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -693,80 +708,114 @@ export function MessagesClient() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Attached image preview banner */}
-          {attachedImageUrl && (
-            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <img
-                  src={attachedImageUrl}
-                  alt="Attachment preview"
-                  className="w-10 h-10 rounded object-cover border border-slate-300 dark:border-slate-700"
-                />
-                <span className="text-xs text-slate-600 dark:text-slate-400">
-                  Figure attachment ready to send
-                </span>
+          {/* ── Incoming Request Decision Bar ───────────────── */}
+          {isIncomingRequest ? (
+            <div className="p-4 bg-saffron-50/80 dark:bg-saffron-950/40 border-t border-saffron-200 dark:border-saffron-900/60 space-y-3">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-saffron-950 dark:text-saffron-200 flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-saffron-600" />
+                  Message Request from {activeConversation.full_name}
+                </p>
+                <p className="text-[11px] text-saffron-800 dark:text-saffron-300 leading-relaxed">
+                  Accepting this request moves the conversation into Direct Messages and enables continuous replies.
+                </p>
               </div>
-              <button
-                onClick={() => setAttachedImageUrl(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-red-500 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  size="md"
+                  variant="primary"
+                  onClick={() => handleAcceptRequest(activeConversation.id)}
+                  isLoading={isAcceptingRequest}
+                  className="gap-1.5 text-xs font-semibold px-4"
+                >
+                  <Check className="w-4 h-4" /> Accept Request &amp; Reply
+                </Button>
+
+                <Button
+                  size="md"
+                  variant="secondary"
+                  onClick={() => handleDeclineRequest(activeConversation.id)}
+                  className="text-xs text-red-600 dark:text-red-400 hover:bg-red-50 border-red-200 dark:border-red-900/50"
+                >
+                  <X className="w-4 h-4 mr-1" /> Decline
+                </Button>
+              </div>
             </div>
+          ) : (
+            /* ── Normal Direct Message Input Bar ─────────────── */
+            <>
+              {/* Attached image preview banner */}
+              {attachedImageUrl && (
+                <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={attachedImageUrl}
+                      alt="Attachment preview"
+                      className="w-10 h-10 rounded object-cover border border-slate-300 dark:border-slate-700"
+                    />
+                    <span className="text-xs text-slate-600 dark:text-slate-400">
+                      Figure attachment ready to send
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setAttachedImageUrl(null)}
+                    className="p-1 rounded-full text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 bg-white dark:bg-slate-900">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+
+                {/* Attachment Button */}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                  className="px-3 shrink-0 text-slate-500 hover:text-brand-600"
+                  title="Attach figure or lab gel"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
+
+                <input
+                  type="text"
+                  placeholder={`Message ${activeConversation.full_name}...`}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  className="flex-1 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleSendMessage}
+                  disabled={(!inputValue.trim() && !attachedImageUrl) || isUploadingImage}
+                  className="px-4 shrink-0 rounded-xl"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </>
           )}
-
-          {/* Input bar */}
-          <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 bg-white dark:bg-slate-900">
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageUpload}
-            />
-
-            {/* Attachment Button */}
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingImage}
-              className="px-3 shrink-0 text-slate-500 hover:text-brand-600"
-              title="Attach figure or lab gel"
-            >
-              <Paperclip className="w-4 h-4" />
-            </Button>
-
-            <input
-              type="text"
-              placeholder={
-                isIncomingRequest
-                  ? `Reply to accept request from ${activeConversation.full_name}...`
-                  : `Message ${activeConversation.full_name}...`
-              }
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              className="flex-1 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleSendMessage}
-              disabled={(!inputValue.trim() && !attachedImageUrl) || isUploadingImage}
-              className="px-4 shrink-0 rounded-xl"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-sm gap-2">

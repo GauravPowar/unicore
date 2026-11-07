@@ -22,6 +22,7 @@ import {
   AtSign,
   Plus,
   Bell,
+  Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -30,11 +31,13 @@ import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { OFFICIAL_FORUMS } from '@/lib/constants';
 import { CreateForumModal } from '@/components/forums/CreateForumModal';
+import { createClient } from '@/lib/supabase/client';
 import type { Forum } from '@/types';
 
 const PRIMARY_NAV = [
   { href: '/', label: 'Feed', icon: Home },
   { href: '/directory', label: 'Researchers', icon: Users },
+  { href: '/updates', label: 'Team Updates', icon: Megaphone },
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/messages', label: 'Messages', icon: MessageSquare },
 ];
@@ -47,6 +50,7 @@ const FORUM_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   'protocol-troubleshooting': Wrench,
   'materials-nanoscience': BookOpen,
   'open-science-india': FileSearch,
+  'team-updates': Megaphone,
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -56,6 +60,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [forums, setForums] = useState<Forum[]>(OFFICIAL_FORUMS);
   const { profile, signOut } = useAuth();
   const currentUser = profile;
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     fetch('/api/forums')
@@ -67,6 +73,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const fetchCounters = async () => {
+      try {
+        const supabase = createClient();
+        const { count: msgCount } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', currentUser.id)
+          .eq('is_read', false);
+
+        if (msgCount !== null && msgCount !== undefined) {
+          setUnreadMessages(msgCount);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchCounters();
+  }, [currentUser?.id]);
 
   return (
     <div className="flex min-h-screen">
@@ -120,7 +147,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              {label}
+              <span className="flex-1 truncate">{label}</span>
+              {href === '/notifications' && unreadNotifs > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-500 text-white shrink-0">
+                  {unreadNotifs}
+                </span>
+              )}
+              {href === '/messages' && unreadMessages > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-saffron-500 text-white shrink-0">
+                  {unreadMessages}
+                </span>
+              )}
             </Link>
           ))}
 
@@ -256,6 +293,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
+            {currentUser && (
+              <div className="flex items-center gap-1 sm:hidden">
+                <Link
+                  href="/notifications"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 relative"
+                  title="Notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadNotifs > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-500" />
+                  )}
+                </Link>
+                <Link
+                  href="/messages"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 relative"
+                  title="Messages"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-saffron-500" />
+                  )}
+                </Link>
+              </div>
+            )}
             <ShareModal />
             <ThemeToggle />
           </div>

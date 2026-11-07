@@ -158,27 +158,22 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
     try {
       const supabase = createClient();
       if (nextState) {
-        await supabase.from('post_upvotes').upsert({
+        await supabase.from('post_upvotes').insert({
           post_id: currentPost.id,
           user_id: user.id,
         });
-        await supabase
-          .from('posts')
-          .update({ upvotes_count: upvotes + 1 })
-          .eq('id', currentPost.id);
       } else {
         await supabase
           .from('post_upvotes')
           .delete()
           .eq('post_id', currentPost.id)
           .eq('user_id', user.id);
-        await supabase
-          .from('posts')
-          .update({ upvotes_count: Math.max(0, upvotes - 1) })
-          .eq('id', currentPost.id);
       }
     } catch (err) {
       console.warn('Upvote error:', err);
+      // rollback
+      setUpvotes((v) => (nextState ? Math.max(0, v - 1) : v + 1));
+      setHasUpvoted(!nextState);
     }
   };
 
