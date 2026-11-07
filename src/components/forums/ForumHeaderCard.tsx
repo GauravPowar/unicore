@@ -125,3 +125,4 @@ export function ForumHeaderCard({ forum }: ForumHeaderCardProps) {
     </div>
   );
 }
+

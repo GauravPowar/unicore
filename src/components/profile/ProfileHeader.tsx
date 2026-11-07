@@ -91,6 +91,7 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
   }, [initialProfile.id, user]);
 
   // Edit form state
+  const [fullName, setFullName] = useState(initialProfile.full_name || '');
   const [username, setUsername] = useState(initialProfile.username || '');
   const [avatarUrl, setAvatarUrl] = useState(initialProfile.avatar_url || '');
   const [bio, setBio] = useState(initialProfile.bio || '');
@@ -136,6 +137,9 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
           setGoogleScholar(l.googleScholar || '');
           setGithubUrl(l.githubUrl || '');
           setPersonalWebsite(l.personalWebsite || '');
+        }
+        if (d.profile?.full_name) {
+          setFullName(d.profile.full_name);
         }
         if (d.profile?.username) {
           setUsername(d.profile.username);
@@ -228,6 +232,13 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
 
   const handleSave = async () => {
     if (!user) return;
+
+    const cleanFullName = fullName.trim();
+    if (!cleanFullName || cleanFullName.length < 2) {
+      alert('Please enter a valid full name (minimum 2 characters).');
+      return;
+    }
+
     setIsSaving(true);
 
     const skillsOffered = skillsOfferedInput
@@ -242,63 +253,83 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
 
     const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
 
-    const updates: Record<string, unknown> = {
-      bio: bio.trim() || null,
-      avatar_url: avatarUrl.trim() || null,
-      institution: institution.trim() || null,
-      department: department.trim() || null,
-      city_state: cityState.trim() || null,
-      collab_status: collabStatus,
-      skills_offered: skillsOffered,
-      skills_needed: skillsNeeded,
-      updated_at: new Date().toISOString(),
+    const linksPayload = {
+      labWebsite: labWebsite.trim(),
+      googleScholar: googleScholar.trim(),
+      githubUrl: githubUrl.trim(),
+      personalWebsite: personalWebsite.trim(),
     };
 
     try {
-      const supabase = createClient();
-
-      // 1. Update user metadata for username and links
-      await supabase.auth.updateUser({
-        data: {
+      // 1. Call server API endpoint with atomic update of profiles & auth user_metadata
+      const res = await fetch(`/api/profile/${initialProfile.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: cleanFullName,
           username: cleanUsername,
-          links: {
-            labWebsite: labWebsite.trim(),
-            googleScholar: googleScholar.trim(),
-            githubUrl: githubUrl.trim(),
-            personalWebsite: personalWebsite.trim(),
-          },
-        },
+          avatar_url: avatarUrl.trim() || null,
+          bio: bio.trim() || null,
+          institution: institution.trim() || null,
+          department: department.trim() || null,
+          city_state: cityState.trim() || null,
+          collab_status: collabStatus,
+          skills_offered: skillsOffered,
+          skills_needed: skillsNeeded,
+          links: linksPayload,
+        }),
       });
 
-      // 2. Update profiles table
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
-
-      if (!error) {
-        setProfile((prev) => ({
-          ...prev,
-          ...updates,
-          username: cleanUsername || prev.username,
-          links: {
-            labWebsite: labWebsite.trim(),
-            googleScholar: googleScholar.trim(),
-            githubUrl: githubUrl.trim(),
-            personalWebsite: personalWebsite.trim(),
-          },
-        } as Profile));
-        setIsEditing(false);
-        if (cleanUsername && typeof window !== 'undefined') {
-          window.history.replaceState(null, '', `/u/${cleanUsername}`);
-        }
-        router.refresh();
-      } else {
-        alert(`Could not save changes: ${error.message}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to update profile');
       }
-    } catch (err) {
+
+      const { profile: updatedProfile } = await res.json();
+
+      // 2. Also sync client supabase session if available
+      try {
+        const supabase = createClient();
+        await supabase.auth.updateUser({
+          data: {
+            full_name: cleanFullName,
+            name: cleanFullName,
+            username: cleanUsername,
+            links: linksPayload,
+          },
+        });
+      } catch {
+        // Non-critical if server admin already updated it
+      }
+
+      const mergedProfile: Profile = {
+        ...profile,
+        ...(updatedProfile || {}),
+        full_name: cleanFullName,
+        username: cleanUsername || profile.username,
+        links: linksPayload,
+      };
+
+      setProfile(mergedProfile);
+
+      // Dispatch global profile updated event for AuthProvider & AppShell
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('researchsetu:profile_updated', { detail: mergedProfile })
+        );
+      }
+
+      setIsEditing(false);
+
+      if (cleanUsername && typeof window !== 'undefined') {
+        window.history.replaceState(null, '', `/u/${cleanUsername}`);
+      }
+
+      router.refresh();
+    } catch (err: unknown) {
       console.error('Profile update error:', err);
-      alert('Network error while updating profile.');
+      const msg = err instanceof Error ? err.message : 'Network error while updating profile.';
+      alert(msg);
     } finally {
       setIsSaving(false);
     }
@@ -594,7 +625,7 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
 
           {/* Profile Picture Upload */}
           <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center gap-4">
-            <Avatar name={profile.full_name} src={avatarUrl} size="lg" />
+            <Avatar name={fullName || profile.full_name} src={avatarUrl} size="lg" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Profile Picture</p>
               <p className="text-[11px] text-slate-500">JPG, PNG or GIF up to 5MB.</p>
@@ -629,8 +660,26 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
             </div>
           </div>
 
-          {/* Username & Collab Status */}
+          {/* Identity: Full Name & Handle */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Full Name / Researcher Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Dr. Gaurav Sunil Powar"
+                maxLength={70}
+                required
+                className="w-full text-xs px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Shown on your research posts, comments, publications, and directory.
+              </p>
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Permanent Handle (@username)
@@ -643,7 +692,7 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                   placeholder="e.g. gaurav_powar"
                   maxLength={24}
-                  className="w-full text-xs pl-8 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 font-mono"
+                  className="w-full text-xs pl-8 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
               <p className="text-[10px] text-slate-400 mt-1 truncate">
@@ -653,22 +702,23 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
                 </span>
               </p>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Collaboration Status
-              </label>
-              <select
-                value={collabStatus}
-                onChange={(e) => setCollabStatus(e.target.value as CollabStatus)}
-                className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100"
-              >
-                <option value="open_to_collab">Open to Collaboration</option>
-                <option value="offering_mentorship">Offering Mentorship</option>
-                <option value="looking_for_coauthor">Looking for Co-Authors</option>
-                <option value="busy">Currently Busy</option>
-              </select>
-            </div>
+          {/* Collaboration Status */}
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Collaboration Status
+            </label>
+            <select
+              value={collabStatus}
+              onChange={(e) => setCollabStatus(e.target.value as CollabStatus)}
+              className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option value="open_to_collab">Open to Collaboration</option>
+              <option value="offering_mentorship">Offering Mentorship</option>
+              <option value="looking_for_coauthor">Looking for Co-Authors</option>
+              <option value="busy">Currently Busy</option>
+            </select>
           </div>
 
           {/* Academic Links Section */}

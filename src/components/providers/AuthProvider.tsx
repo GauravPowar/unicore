@@ -137,9 +137,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await syncProfile(authUser);
     });
 
+    const handleProfileUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<Profile>;
+      if (customEvent.detail) {
+        setProfile((prev) => ({
+          ...(prev || {}),
+          ...customEvent.detail,
+        } as Profile));
+      } else {
+        fetchSession();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('researchsetu:profile_updated', handleProfileUpdate);
+    }
+
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('researchsetu:profile_updated', handleProfileUpdate);
+      }
     };
   }, []);
 

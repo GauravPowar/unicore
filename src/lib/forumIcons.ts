@@ -35,3 +35,4 @@ export const FORUM_ICONS: Record<string, React.ComponentType<{ className?: strin
 export function getForumIcon(slug: string): React.ComponentType<{ className?: string }> {
   return FORUM_ICONS[slug] || BookOpen;
 }
+
