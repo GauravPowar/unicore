@@ -89,9 +89,7 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
   }, [initialProfile.id, user]);
 
   // Edit form state
-  const [username, setUsername] = useState(
-    initialProfile.username || (user?.user_metadata?.username as string) || ''
-  );
+  const [username, setUsername] = useState(initialProfile.username || '');
   const [avatarUrl, setAvatarUrl] = useState(initialProfile.avatar_url || '');
   const [bio, setBio] = useState(initialProfile.bio || '');
   const [institution, setInstitution] = useState(initialProfile.institution || '');
@@ -105,12 +103,31 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
     initialProfile.skills_needed?.join(', ') || ''
   );
 
-  // Links state
-  const userLinks = (user?.user_metadata?.links as Record<string, string>) || {};
-  const [labWebsite, setLabWebsite] = useState(userLinks.labWebsite || '');
-  const [googleScholar, setGoogleScholar] = useState(userLinks.googleScholar || '');
-  const [githubUrl, setGithubUrl] = useState(userLinks.githubUrl || '');
-  const [personalWebsite, setPersonalWebsite] = useState(userLinks.personalWebsite || '');
+  // Links state – ALWAYS read from the profile being viewed (initialProfile.links), NOT the viewer!
+  const targetLinks = (initialProfile.links as Record<string, string>) || {};
+  const [labWebsite, setLabWebsite] = useState(targetLinks.labWebsite || '');
+  const [googleScholar, setGoogleScholar] = useState(targetLinks.googleScholar || '');
+  const [githubUrl, setGithubUrl] = useState(targetLinks.githubUrl || '');
+  const [personalWebsite, setPersonalWebsite] = useState(targetLinks.personalWebsite || '');
+
+  // Synchronize links specifically for this profile ID
+  useEffect(() => {
+    fetch(`/api/profile/${initialProfile.id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.profile?.links) {
+          const l = d.profile.links;
+          setLabWebsite(l.labWebsite || '');
+          setGoogleScholar(l.googleScholar || '');
+          setGithubUrl(l.githubUrl || '');
+          setPersonalWebsite(l.personalWebsite || '');
+        }
+        if (d.profile?.username) {
+          setUsername(d.profile.username);
+        }
+      })
+      .catch(() => {});
+  }, [initialProfile.id]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -249,6 +266,12 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
           ...prev,
           ...updates,
           username: cleanUsername || prev.username,
+          links: {
+            labWebsite: labWebsite.trim(),
+            googleScholar: googleScholar.trim(),
+            githubUrl: githubUrl.trim(),
+            personalWebsite: personalWebsite.trim(),
+          },
         } as Profile));
         setIsEditing(false);
         router.refresh();

@@ -21,6 +21,13 @@ export type ForumCategory =
 
 // ── Database Row Types ────────────────────────────────────────
 
+export interface ProfileLinks {
+  labWebsite?: string;
+  googleScholar?: string;
+  githubUrl?: string;
+  personalWebsite?: string;
+}
+
 export interface Profile {
   id: string;
   username?: string | null;
@@ -35,6 +42,7 @@ export interface Profile {
   collab_status: CollabStatus;
   skills_offered: string[];
   skills_needed: string[];
+  links?: ProfileLinks | null;
   created_at: string;
   updated_at: string;
 }

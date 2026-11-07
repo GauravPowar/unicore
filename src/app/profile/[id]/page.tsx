@@ -34,8 +34,28 @@ async function fetchProfileData(id: string): Promise<{ profile: Profile | null; 
         .eq('author_id', id)
         .order('created_at', { ascending: false });
 
+      // Retrieve target user's specific links and username from auth metadata
+      let links = null;
+      let username = dbProfile.username;
+      try {
+        const adminClient = createAdminClient();
+        const { data: authUserData } = await adminClient.auth.admin.getUserById(id);
+        if (authUserData?.user) {
+          links = authUserData.user.user_metadata?.links || null;
+          if (!username) {
+            username = authUserData.user.user_metadata?.username || null;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch user metadata links:', err);
+      }
+
       return {
-        profile: dbProfile as Profile,
+        profile: {
+          ...(dbProfile as Profile),
+          links,
+          username,
+        },
         posts: (dbPosts as unknown as Post[]) || [],
       };
     }
