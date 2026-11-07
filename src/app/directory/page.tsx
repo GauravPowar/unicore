@@ -3,6 +3,7 @@
 // Live Supabase integration with zero mock data
 // ============================================================
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { DirectoryClient } from '@/components/directory/DirectoryClient';
 import { Users } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -19,14 +20,27 @@ export default async function DirectoryPage() {
   let profiles: Profile[] = [];
 
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
+    const admin = createAdminClient();
+    const { data: dbProfiles, error } = await admin
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      profiles = data as Profile[];
+    if (!error && dbProfiles) {
+      try {
+        const { data: authUsers } = await admin.auth.admin.listUsers({ perPage: 500 });
+        const userMap = new Map((authUsers?.users || []).map((u) => [u.id, u]));
+
+        profiles = dbProfiles.map((p) => {
+          const authUser = userMap.get(p.id);
+          return {
+            ...p,
+            username: p.username || authUser?.user_metadata?.username || null,
+          } as Profile;
+        });
+      } catch {
+        profiles = dbProfiles as Profile[];
+      }
     }
   } catch (err) {
     console.error('Error loading live profiles:', err);

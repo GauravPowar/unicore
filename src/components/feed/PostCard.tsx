@@ -307,13 +307,20 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
       {/* Author row */}
       <div className="flex items-start gap-3 mb-3">
         {author && (
-          <Avatar name={author.full_name} src={author.avatar_url} size="md" />
+          <Link
+            href={author.username ? `/u/${author.username}` : `/profile/${author.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hover:opacity-90 transition-opacity"
+          >
+            <Avatar name={author.full_name} src={author.avatar_url} size="md" />
+          </Link>
         )}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             {author && (
               <Link
-                href={`/profile/${author.id}`}
+                href={author.username ? `/u/${author.username}` : `/profile/${author.id}`}
+                onClick={(e) => e.stopPropagation()}
                 className="font-semibold text-slate-900 dark:text-white text-sm hover:underline"
               >
                 {author.full_name}
@@ -321,7 +328,13 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
             )}
             {author?.is_verified_researcher && <VerifiedBadge />}
             {author?.username && (
-              <span className="text-xs text-slate-400 font-mono">@{author.username}</span>
+              <Link
+                href={`/u/${author.username}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-brand-600 dark:text-brand-400 font-mono hover:underline"
+              >
+                @{author.username}
+              </Link>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-0.5">

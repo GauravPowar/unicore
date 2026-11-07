@@ -60,7 +60,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isMounted) return;
 
       if (userProfile) {
-        setProfile(userProfile as Profile);
+        setProfile({
+          ...(userProfile as Profile),
+          username: targetUser.user_metadata?.username || userProfile.username || null,
+          links: targetUser.user_metadata?.links || userProfile.links || null,
+        });
       } else {
         // Self-heal: ensure profile exists in database for this authenticated user
         const isAcademic = Boolean(
@@ -88,6 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           skills_needed: [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          username: targetUser.user_metadata?.username || null,
+          links: targetUser.user_metadata?.links || null,
         };
 
         try {

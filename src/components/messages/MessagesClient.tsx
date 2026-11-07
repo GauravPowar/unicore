@@ -744,7 +744,11 @@ export function MessagesClient() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <Link
-                  href={`/profile/${activeConversation.id}`}
+                  href={
+                    activeConversation.username
+                      ? `/u/${activeConversation.username}`
+                      : `/profile/${activeConversation.id}`
+                  }
                   className="font-semibold text-sm text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1"
                 >
                   {activeConversation.full_name}

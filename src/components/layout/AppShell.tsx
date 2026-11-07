@@ -244,7 +244,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {currentUser ? (
               <div className="space-y-2">
                 <Link
-                  href={`/profile/${currentUser.id}`}
+                  href={currentUser.username ? `/u/${currentUser.username}` : `/profile/${currentUser.id}`}
                   onClick={() => setSidebarOpen(false)}
                   className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200/60 dark:border-slate-700/50"
                 >
@@ -266,7 +266,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
                 <div className="flex justify-between items-center px-1 text-[11px]">
                   <Link
-                    href={`/profile/${currentUser.id}`}
+                    href={currentUser.username ? `/u/${currentUser.username}` : `/profile/${currentUser.id}`}
                     className="text-brand-600 dark:text-brand-400 font-medium hover:underline"
                   >
                     View Profile

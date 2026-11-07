@@ -21,17 +21,26 @@ const COLLAB_STATUS_COLORS: Record<string, string> = {
 };
 
 export function ResearcherCard({ profile }: ResearcherCardProps) {
+  const profileHref = profile.username ? `/u/${profile.username}` : `/profile/${profile.id}`;
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col gap-3.5 hover:border-brand-300 dark:hover:border-brand-700 transition-all shadow-xs">
       {/* Top row */}
       <div className="flex items-start gap-3.5">
-        <Avatar name={profile.full_name} src={profile.avatar_url} size="lg" />
+        <Link href={profileHref} className="hover:opacity-90 transition-opacity">
+          <Avatar name={profile.full_name} src={profile.avatar_url} size="lg" />
+        </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="font-semibold text-slate-900 dark:text-white text-base">
+            <Link href={profileHref} className="font-semibold text-slate-900 dark:text-white text-base hover:underline">
               {profile.full_name}
-            </span>
+            </Link>
             {profile.is_verified_researcher && <VerifiedBadge />}
+            {profile.username && (
+              <span className="text-xs font-mono text-brand-600 dark:text-brand-400">
+                @{profile.username}
+              </span>
+            )}
           </div>
           {profile.institution && (
             <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mt-0.5 truncate">
@@ -138,7 +147,7 @@ export function ResearcherCard({ profile }: ResearcherCardProps) {
           </Button>
         </Link>
         <Link
-          href={`/profile/${profile.id}`}
+          href={profileHref}
           className="flex-1"
         >
           <Button variant="secondary" size="sm" className="w-full gap-1.5 text-xs">

@@ -37,6 +37,8 @@ import {
   VolumeX,
   Volume2,
   MoreHorizontal,
+  Share2,
+  CheckCircle2,
 } from 'lucide-react';
 
 function GithubIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) {
@@ -102,6 +104,19 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
   const [skillsNeededInput, setSkillsNeededInput] = useState(
     initialProfile.skills_needed?.join(', ') || ''
   );
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleCopyProfileLink = () => {
+    if (typeof window !== 'undefined') {
+      const activeHandle = profile.username || username || (user?.id === profile.id ? user?.user_metadata?.username : null);
+      const url = activeHandle
+        ? `${window.location.origin}/u/${activeHandle}`
+        : `${window.location.origin}/profile/${profile.id}`;
+      navigator.clipboard?.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
 
   // Links state – ALWAYS read from the profile being viewed (initialProfile.links), NOT the viewer!
   const targetLinks = (initialProfile.links as Record<string, string>) || {};
@@ -274,6 +289,9 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
           },
         } as Profile));
         setIsEditing(false);
+        if (cleanUsername && typeof window !== 'undefined') {
+          window.history.replaceState(null, '', `/u/${cleanUsername}`);
+        }
         router.refresh();
       } else {
         alert(`Could not save changes: ${error.message}`);
@@ -442,22 +460,41 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
         {/* Action CTAs */}
         <div className="flex sm:flex-col gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0">
           {isOwner ? (
-            <Button
-              variant={isEditing ? 'secondary' : 'primary'}
-              size="md"
-              onClick={() => setIsEditing(!isEditing)}
-              className="gap-2 text-xs w-full"
-            >
-              {isEditing ? (
-                <>
-                  <X className="w-4 h-4" /> Cancel Edit
-                </>
-              ) : (
-                <>
-                  <Edit3 className="w-4 h-4" /> Edit Profile &amp; Bio
-                </>
-              )}
-            </Button>
+            <>
+              <Button
+                variant={isEditing ? 'secondary' : 'primary'}
+                size="md"
+                onClick={() => setIsEditing(!isEditing)}
+                className="gap-2 text-xs w-full"
+              >
+                {isEditing ? (
+                  <>
+                    <X className="w-4 h-4" /> Cancel Edit
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="w-4 h-4" /> Edit Profile &amp; Bio
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCopyProfileLink}
+                className="gap-1.5 text-xs w-full"
+              >
+                {linkCopied ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Link Copied!
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3.5 h-3.5 text-brand-500" /> Share Profile Link
+                  </>
+                )}
+              </Button>
+            </>
           ) : (
             <>
               {/* Follow / Unfollow Button */}
@@ -497,6 +534,24 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
                   <Coffee className="w-3.5 h-3.5 text-saffron-500" /> Request Coffee Chat
                 </Button>
               </Link>
+
+              {/* Share Profile Link */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopyProfileLink}
+                className="w-full gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-brand-600"
+              >
+                {linkCopied ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Link Copied!
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3.5 h-3.5 text-slate-400" /> Share Profile
+                  </>
+                )}
+              </Button>
 
               {/* More options menu (Mute) */}
               <div className="relative">
@@ -591,6 +646,12 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
                   className="w-full text-xs pl-8 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 font-mono"
                 />
               </div>
+              <p className="text-[10px] text-slate-400 mt-1 truncate">
+                Your profile URL:{' '}
+                <span className="font-mono text-brand-600 dark:text-brand-400 font-medium">
+                  /u/{username || 'username'}
+                </span>
+              </p>
             </div>
 
             <div>

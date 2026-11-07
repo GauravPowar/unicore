@@ -3,6 +3,7 @@
 // Live Supabase integration with zero mock data
 // ============================================================
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { FeedClient } from '@/components/feed/FeedClient';
 import { Rss } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -27,6 +28,25 @@ export default async function HomePage() {
 
     if (!error && data) {
       posts = data as unknown as Post[];
+      try {
+        const admin = createAdminClient();
+        const { data: authUsers } = await admin.auth.admin.listUsers({ perPage: 500 });
+        const userMap = new Map((authUsers?.users || []).map((u) => [u.id, u]));
+
+        posts = posts.map((p) => {
+          if (!p.author) return p;
+          const authUser = userMap.get(p.author.id);
+          return {
+            ...p,
+            author: {
+              ...p.author,
+              username: p.author.username || authUser?.user_metadata?.username || null,
+            },
+          };
+        });
+      } catch {
+        // use raw posts
+      }
     }
   } catch (err) {
     console.error('Error loading live posts:', err);

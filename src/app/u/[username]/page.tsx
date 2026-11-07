@@ -1,41 +1,64 @@
 // ============================================================
-// /u/[username] – Vanity Handle Resolver
-// Resolves @handle and redirects to /profile/[id]
+// /u/[username] – Researcher Profile by @Username Handle
+// Direct rendering at canonical vanity URL (e.g. /u/gauravpowar)
 // ============================================================
 import { notFound, redirect } from 'next/navigation';
-import { createAdminClient } from '@/lib/supabase/admin';
+import type { Metadata } from 'next';
+import { fetchProfileByIdentifier } from '@/lib/profileResolver';
+import { ProfileView } from '@/components/profile/ProfileView';
 
 export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
 
 interface VanityProps {
   params: Promise<{ username: string }>;
+}
+
+export async function generateMetadata({ params }: VanityProps): Promise<Metadata> {
+  const { username } = await params;
+  const { profile } = await fetchProfileByIdentifier(username);
+
+  if (!profile) {
+    return { title: 'Researcher Not Found | ResearchSetu' };
+  }
+
+  const handle = profile.username ? ` (@${profile.username})` : '';
+  const title = `${profile.full_name}${handle} | ResearchSetu`;
+  const description =
+    profile.bio ||
+    `${profile.full_name} (${profile.institution || 'Researcher'}) on ResearchSetu Indian Interdisciplinary Network`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'profile',
+      siteName: 'ResearchSetu',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
+  };
 }
 
 export default async function VanityUsernamePage({ params }: VanityProps) {
   const { username } = await params;
   if (!username) notFound();
 
-  const cleanHandle = decodeURIComponent(username).replace(/^@/, '').toLowerCase().trim();
+  const { profile, posts, canonicalUsername } = await fetchProfileByIdentifier(username);
 
-  const admin = createAdminClient();
-
-  // 1. If UUID passed directly
-  if (cleanHandle.length === 36 && cleanHandle.includes('-')) {
-    redirect(`/profile/${cleanHandle}`);
+  if (!profile) {
+    notFound();
   }
 
-  // 2. Search auth user metadata
-  const { data: { users }, error } = await admin.auth.admin.listUsers();
-
-  if (!error && users) {
-    const matched = users.find(
-      (u) => u.user_metadata?.username?.toLowerCase() === cleanHandle
-    );
-
-    if (matched) {
-      redirect(`/profile/${matched.id}`);
-    }
+  // Canonical redirect if username case or uuid alias was supplied
+  if (canonicalUsername && username.toLowerCase() !== canonicalUsername.toLowerCase()) {
+    redirect(`/u/${canonicalUsername}`);
   }
 
-  notFound();
+  return <ProfileView profile={profile} posts={posts} />;
 }
