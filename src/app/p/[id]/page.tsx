@@ -16,21 +16,22 @@ export default async function ShortlinkPage({ params }: ShortlinkProps) {
   if (!id) notFound();
 
   const supabase = await createClient();
-  let query = supabase.from('posts').select('id');
 
   if (id.length === 36) {
-    query = query.eq('id', id);
+    const { data: post } = await supabase.from('posts').select('id').eq('id', id).maybeSingle();
+    if (post) redirect(`/post/${post.id}`);
   } else {
-    // 8-character or partial prefix match
-    query = query.ilike('id', `${id}%`);
+    // Prefix lookup: match short prefix (with or without hyphens)
+    const { data: posts } = await supabase.from('posts').select('id');
+    const cleanInput = id.replace(/-/g, '').toLowerCase();
+    const matched = posts?.find(
+      (p) =>
+        p.id.toLowerCase().startsWith(id.toLowerCase()) ||
+        p.id.replace(/-/g, '').toLowerCase().startsWith(cleanInput)
+    );
+    if (matched) redirect(`/post/${matched.id}`);
   }
 
-  const { data: post, error } = await query.maybeSingle();
-
-  if (error || !post) {
-    notFound();
-  }
-
-  redirect(`/post/${post.id}`);
+  notFound();
 }
 
