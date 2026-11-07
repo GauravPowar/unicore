@@ -26,6 +26,7 @@ import {
   Pencil,
   Trash2,
   X,
+  ExternalLink,
 } from 'lucide-react';
 import type { Post, Comment, PostType } from '@/types';
 
@@ -50,6 +51,36 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isTargeted, setIsTargeted] = useState(false);
+
+  // Sync bookmark from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved: string[] = JSON.parse(localStorage.getItem('unicore_saved_posts') || '[]');
+        if (Array.isArray(saved) && saved.includes(currentPost.id)) {
+          setIsBookmarked(true);
+        }
+      } catch {}
+    }
+  }, [currentPost.id]);
+
+  const toggleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !isBookmarked;
+    setIsBookmarked(next);
+    if (typeof window !== 'undefined') {
+      try {
+        let saved: string[] = JSON.parse(localStorage.getItem('unicore_saved_posts') || '[]');
+        if (next) {
+          if (!saved.includes(currentPost.id)) saved.push(currentPost.id);
+        } else {
+          saved = saved.filter((id) => id !== currentPost.id);
+        }
+        localStorage.setItem('unicore_saved_posts', JSON.stringify(saved));
+        window.dispatchEvent(new CustomEvent('unicore_bookmarks_updated'));
+      } catch {}
+    }
+  };
 
   // Author action state
   const [menuOpen, setMenuOpen] = useState(false);
@@ -443,6 +474,44 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
           <div className={cn(compact && 'line-clamp-5')}>
             <MarkdownContent content={currentPost.content_markdown} />
           </div>
+
+          {/* Academic DOI / Paper Embed Card */}
+          {(() => {
+            const doiRegex = /(?:https?:\/\/doi\.org\/|doi:\s*|(?:^|\s))(10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+)/i;
+            const doiMatch = currentPost.content_markdown.match(doiRegex);
+            const detectedDoi = doiMatch ? doiMatch[1].replace(/[.,;)]+$/, '') : null;
+            if (!detectedDoi) return null;
+
+            return (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3 text-xs"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center shrink-0 text-[11px] border border-brand-500/20">
+                    DOI
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                      Academic Preprint / Publication
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                      https://doi.org/{detectedDoi}
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={`https://doi.org/${detectedDoi}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 shrink-0 flex items-center gap-1.5 text-xs transition-colors shadow-xs"
+                >
+                  <span>Read Paper</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            );
+          })()}
         </>
       )}
 
@@ -514,16 +583,16 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
         </button>
 
         <button
-          onClick={() => setIsBookmarked((b) => !b)}
+          onClick={toggleBookmark}
           className={cn(
             'flex items-center gap-1.5 text-xs p-1.5 rounded-lg transition-colors',
             isBookmarked
-              ? 'text-saffron-500 hover:text-saffron-600'
+              ? 'text-saffron-500 hover:text-saffron-600 bg-saffron-50 dark:bg-saffron-950/40'
               : 'text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-50 dark:hover:bg-slate-800'
           )}
-          title={isBookmarked ? 'Bookmarked' : 'Bookmark post'}
+          title={isBookmarked ? 'Saved to bookmarks' : 'Save post to bookmarks'}
         >
-          <Bookmark className={cn('w-4 h-4', isBookmarked && 'fill-current')} />
+          <Bookmark className={cn('w-4 h-4', isBookmarked && 'fill-current text-saffron-500')} />
         </button>
       </div>
 

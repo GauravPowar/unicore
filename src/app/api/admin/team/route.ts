@@ -1,22 +1,14 @@
 // ============================================================
 // /api/admin/team – Admin Team Management
-// Allows Root Admin (Gaurav Sunil Powar) and designated Admins
-// to add and remove members of the Core Admin Team
+// Decoupled from personal accounts
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { verifyAdminRequest } from '@/lib/adminAuth';
 
-export const ROOT_ADMIN_IDS = ['8d3cc26d-be9a-49ae-a394-b7a4914a8911'];
-export const ROOT_ADMIN_EMAILS = ['24078@iiserbpr.ac.in'];
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    const auth = await verifyAdminRequest(req);
     const admin = createAdminClient();
     const {
       data: { users },
@@ -27,39 +19,28 @@ export async function GET() {
       return NextResponse.json({ error: 'Could not fetch users' }, { status: 500 });
     }
 
-    // Determine if caller is an admin
-    const isCallerAdmin = user
-      ? ROOT_ADMIN_IDS.includes(user.id) ||
-        ROOT_ADMIN_EMAILS.includes(user.email || '') ||
-        user.user_metadata?.is_admin === true ||
-        user.app_metadata?.role === 'admin'
-      : false;
-
     // Fetch all profiles for metadata
     const { data: profiles } = await admin.from('profiles').select('*');
     const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
 
-    // Identify admins
+    // Identify admins by role or metadata (zero personal IDs hardcoded)
     const adminList = users
       .filter(
         (u) =>
-          ROOT_ADMIN_IDS.includes(u.id) ||
-          ROOT_ADMIN_EMAILS.includes(u.email || '') ||
           u.user_metadata?.is_admin === true ||
           u.app_metadata?.role === 'admin'
       )
       .map((u) => {
         const prof = profileMap.get(u.id);
-        const isRoot = ROOT_ADMIN_IDS.includes(u.id) || ROOT_ADMIN_EMAILS.includes(u.email || '');
         return {
           id: u.id,
           email: u.email,
           full_name: prof?.full_name || u.user_metadata?.full_name || u.email?.split('@')[0],
           avatar_url: prof?.avatar_url || null,
-          institution: prof?.institution || 'Core Development Team',
+          institution: prof?.institution || 'UniCore Team',
           department: prof?.department || null,
-          isRootAdmin: isRoot,
-          role: isRoot ? 'Lead Admin & Founder' : 'Admin Team Member',
+          isRootAdmin: false,
+          role: 'Admin Team Member',
         };
       });
 
@@ -80,7 +61,7 @@ export async function GET() {
     return NextResponse.json({
       admins: adminList,
       candidates,
-      isCallerAdmin,
+      isCallerAdmin: auth.isAdmin,
     });
   } catch (error) {
     console.error('Error fetching admin team:', error);
@@ -90,22 +71,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const isCallerAdmin =
-      ROOT_ADMIN_IDS.includes(user.id) ||
-      ROOT_ADMIN_EMAILS.includes(user.email || '') ||
-      user.user_metadata?.is_admin === true ||
-      user.app_metadata?.role === 'admin';
-
-    if (!isCallerAdmin) {
+    const auth = await verifyAdminRequest(req);
+    if (!auth.isAdmin) {
       return NextResponse.json(
         { error: 'Forbidden: Only admin team members can add new admins' },
         { status: 403 }
@@ -153,41 +120,19 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const isCallerAdmin =
-      ROOT_ADMIN_IDS.includes(user.id) ||
-      ROOT_ADMIN_EMAILS.includes(user.email || '') ||
-      user.user_metadata?.is_admin === true ||
-      user.app_metadata?.role === 'admin';
-
-    if (!isCallerAdmin) {
+    const auth = await verifyAdminRequest(req);
+    if (!auth.isAdmin) {
       return NextResponse.json(
-        { error: 'Forbidden: Only admins can manage team permissions' },
+        { error: 'Forbidden: Only admin team members can revoke admins' },
         { status: 403 }
       );
     }
 
-    const body = await req.json();
-    const { targetUserId } = body;
+    const { searchParams } = new URL(req.url);
+    const targetUserId = searchParams.get('userId');
 
     if (!targetUserId) {
-      return NextResponse.json({ error: 'Missing targetUserId' }, { status: 400 });
-    }
-
-    // Prevent removing Root Admin
-    if (ROOT_ADMIN_IDS.includes(targetUserId)) {
-      return NextResponse.json(
-        { error: 'Cannot remove Root Lead Admin from Admin Team' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing userId parameter' }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -208,7 +153,7 @@ export async function DELETE(req: NextRequest) {
       },
       app_metadata: {
         ...targetUser.app_metadata,
-        role: 'user',
+        role: 'authenticated',
       },
     });
 
@@ -221,4 +166,3 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-

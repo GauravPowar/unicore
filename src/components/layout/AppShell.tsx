@@ -23,6 +23,7 @@ import {
   Plus,
   Bell,
   Megaphone,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -302,9 +303,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Footer */}
         <div className="border-t border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
-          <span className="text-xs text-slate-400 dark:text-slate-500">
-            🇮🇳 Made for Indian Research
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              🇮🇳 UniCore
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">·</span>
+            <Link
+              href="/admin"
+              className="text-[11px] text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 transition-colors flex items-center gap-1 font-medium"
+              title="Admin Console"
+            >
+              <Shield className="w-3 h-3" />
+              <span>Admin</span>
+            </Link>
+          </div>
           <ThemeToggle />
         </div>
       </aside>

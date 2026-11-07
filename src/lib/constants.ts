@@ -70,6 +70,6 @@ export const OFFICIAL_FORUMS: Forum[] = [
   },
 ];
 
-export const ROOT_ADMIN_IDS = ['8d3cc26d-be9a-49ae-a394-b7a4914a8911'];
-export const ROOT_ADMIN_EMAILS = ['24078@iiserbpr.ac.in'];
+export const ROOT_ADMIN_IDS: string[] = (process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
+export const ROOT_ADMIN_EMAILS: string[] = (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim()).filter(Boolean);
 

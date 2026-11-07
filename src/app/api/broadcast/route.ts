@@ -1,12 +1,13 @@
 // ============================================================
 // /api/broadcast – Team Updates & Platform Announcements
 // Public GET: Anyone can read broadcast updates
-// Protected POST: Only Admin Team members can broadcast updates
+// Protected POST: Authorized admins can broadcast updates
+// Decoupled from any hardcoded personal account
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { ROOT_ADMIN_IDS, ROOT_ADMIN_EMAILS } from '@/app/api/admin/team/route';
+import { verifyAdminRequest } from '@/lib/adminAuth';
 
 export const BROADCAST_FORUM_ID = '77777777-7777-7777-7777-777777777777';
 
@@ -33,24 +34,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const isCallerAdmin =
-      ROOT_ADMIN_IDS.includes(user.id) ||
-      ROOT_ADMIN_EMAILS.includes(user.email || '') ||
-      user.user_metadata?.is_admin === true ||
-      user.app_metadata?.role === 'admin';
-
-    if (!isCallerAdmin) {
+    const adminAuth = await verifyAdminRequest(req);
+    if (!adminAuth.isAdmin) {
       return NextResponse.json(
-        { error: 'Forbidden: Only admin team members can publish broadcasts' },
+        { error: 'Forbidden: Admin access required to publish broadcasts' },
         { status: 403 }
       );
     }
@@ -64,12 +51,32 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient();
 
+    // Determine author ID:
+    // If authenticated user is present, use their id.
+    // Otherwise fallback to an existing admin profile or first profile in database.
+    let authorId = adminAuth.userId;
+    if (!authorId) {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        authorId = user.id;
+      } else {
+        // Fallback to any profile in database so foreign key is satisfied
+        const { data: profs } = await admin.from('profiles').select('id').limit(1);
+        authorId = profs?.[0]?.id;
+      }
+    }
+
+    if (!authorId) {
+      return NextResponse.json({ error: 'No author profile found in database' }, { status: 400 });
+    }
+
     const { data: post, error: insertError } = await admin
       .from('posts')
       .insert({
-        author_id: user.id,
+        author_id: authorId,
         forum_id: BROADCAST_FORUM_ID,
-        title: title?.trim() || 'Team Update',
+        title: title?.trim() || 'UniCore Team Update',
         content_markdown: content_markdown.trim(),
         media_urls: media_urls || [],
         post_type: 'thought',
@@ -87,4 +94,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
