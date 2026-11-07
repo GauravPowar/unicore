@@ -5,7 +5,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { FeedClient } from '@/components/feed/FeedClient';
-import { Badge } from '@/components/ui/Badge';
+import { ForumHeaderCard } from '@/components/forums/ForumHeaderCard';
 import { OFFICIAL_FORUMS } from '@/lib/constants';
 import type { Metadata } from 'next';
 import type { Post } from '@/types';
@@ -71,16 +71,8 @@ export default async function ForumPage({ params }: ForumPageProps) {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
-      {/* Forum header */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
-        <Badge variant="category" className="mb-2">{forum.category}</Badge>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
-          {forum.name}
-        </h1>
-        {forum.description && (
-          <p className="text-sm text-slate-500 dark:text-slate-400">{forum.description}</p>
-        )}
-      </div>
+      {/* Forum header with Join/Leave button */}
+      <ForumHeaderCard forum={forum} />
 
       <FeedClient initialPosts={posts} defaultForumId={forum.id} />
     </div>

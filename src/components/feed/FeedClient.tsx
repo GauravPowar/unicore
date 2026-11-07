@@ -11,6 +11,11 @@ import { PostCard } from '@/components/feed/PostCard';
 import { createClientId } from '@/lib/utils';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
+import {
+  getForumPreferences,
+  FORUMS_UPDATED_EVENT,
+  type ForumPreferences,
+} from '@/lib/userForums';
 import type { Post, PostType } from '@/types';
 import {
   Sparkles,
@@ -32,18 +37,8 @@ interface FeedClientProps {
   defaultForumId?: string;
 }
 
-type FeedTab = 'all' | 'following' | PostType | 'saved';
+type FeedTab = 'all' | 'my_forums' | 'following' | PostType | 'saved';
 type SortMode = 'latest' | 'top' | 'discussed';
-
-const TABS_CONFIG: Array<{ id: FeedTab; label: string; icon?: string }> = [
-  { id: 'all', label: 'All Feed' },
-  { id: 'following', label: 'Following', icon: '👥' },
-  { id: 'collab_pitch', label: 'Collab Pitches', icon: '🤝' },
-  { id: 'question', label: 'Questions', icon: '❓' },
-  { id: 'thought', label: 'Thoughts', icon: '💭' },
-  { id: 'visual_abstract', label: 'Visual Abstracts', icon: '🎨' },
-  { id: 'saved', label: 'Saved', icon: '🔖' },
-];
 
 export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
   const { profile, user } = useAuth();
@@ -54,6 +49,44 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
   const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [forumPrefs, setForumPrefs] = useState<ForumPreferences>(() =>
+    getForumPreferences(user?.id, user?.user_metadata?.forum_preferences)
+  );
+
+  useEffect(() => {
+    setForumPrefs(getForumPreferences(user?.id, user?.user_metadata?.forum_preferences));
+  }, [user?.id, user?.user_metadata?.forum_preferences]);
+
+  useEffect(() => {
+    const handlePrefsUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<ForumPreferences>;
+      if (customEvent.detail) {
+        setForumPrefs(customEvent.detail);
+      } else {
+        setForumPrefs(getForumPreferences(user?.id, user?.user_metadata?.forum_preferences));
+      }
+    };
+    window.addEventListener(FORUMS_UPDATED_EVENT, handlePrefsUpdate);
+    return () => window.removeEventListener(FORUMS_UPDATED_EVENT, handlePrefsUpdate);
+  }, [user?.id, user?.user_metadata?.forum_preferences]);
+
+  const activeTabs = useMemo(() => {
+    const base: Array<{ id: FeedTab; label: string; icon?: string }> = [
+      { id: 'all', label: defaultForumId ? 'All Posts' : 'All Network' },
+    ];
+    if (!defaultForumId) {
+      base.push({ id: 'my_forums', label: 'My Joined Forums', icon: '🏛️' });
+    }
+    base.push(
+      { id: 'following', label: 'Following', icon: '👥' },
+      { id: 'collab_pitch', label: 'Collab Pitches', icon: '🤝' },
+      { id: 'question', label: 'Questions', icon: '❓' },
+      { id: 'thought', label: 'Thoughts', icon: '💭' },
+      { id: 'visual_abstract', label: 'Visual Abstracts', icon: '🎨' },
+      { id: 'saved', label: 'Saved', icon: '🔖' }
+    );
+    return base;
+  }, [defaultForumId]);
 
   // 1. Fetch live posts
   const fetchLivePosts = useCallback(async () => {
@@ -187,7 +220,17 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
     let result = [...posts];
 
     // Category / Tab filter
-    if (selectedTab === 'following') {
+    if (selectedTab === 'my_forums') {
+      result = result.filter((p) => {
+        if (p.forum?.slug) {
+          return forumPrefs.joinedSlugs.includes(p.forum.slug);
+        }
+        if (!p.forum_id || p.forum_id === '00000000-0000-0000-0000-000000000000') {
+          return forumPrefs.joinedSlugs.includes('general');
+        }
+        return false;
+      });
+    } else if (selectedTab === 'following') {
       result = result.filter((p) => followingIds.includes(p.author_id));
     } else if (selectedTab === 'saved') {
       result = result.filter((p) => savedPostIds.includes(p.id));
@@ -219,7 +262,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
     });
 
     return result;
-  }, [posts, selectedTab, followingIds, savedPostIds, searchQuery, sortMode]);
+  }, [posts, selectedTab, followingIds, savedPostIds, forumPrefs.joinedSlugs, searchQuery, sortMode]);
 
   return (
     <div className="space-y-4">
@@ -230,11 +273,19 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
       <div className="space-y-2.5">
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200/60 dark:border-slate-800 scrollbar-none">
-          {TABS_CONFIG.map((tab) => {
+          {activeTabs.map((tab) => {
             const isSelected = selectedTab === tab.id;
             let count = 0;
             if (tab.id === 'all') count = posts.length;
-            else if (tab.id === 'following') count = posts.filter((p) => followingIds.includes(p.author_id)).length;
+            else if (tab.id === 'my_forums') {
+              count = posts.filter((p) => {
+                if (p.forum?.slug) return forumPrefs.joinedSlugs.includes(p.forum.slug);
+                if (!p.forum_id || p.forum_id === '00000000-0000-0000-0000-000000000000') {
+                  return forumPrefs.joinedSlugs.includes('general');
+                }
+                return false;
+              }).length;
+            } else if (tab.id === 'following') count = posts.filter((p) => followingIds.includes(p.author_id)).length;
             else if (tab.id === 'saved') count = posts.filter((p) => savedPostIds.includes(p.id)).length;
             else count = posts.filter((p) => p.post_type === tab.id).length;
 
@@ -348,7 +399,17 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
       {/* Post List & Custom Empty States */}
       {filteredAndSortedPosts.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center text-slate-400 space-y-3 shadow-xs">
-          {selectedTab === 'following' ? (
+          {selectedTab === 'my_forums' ? (
+            <>
+              <SlidersHorizontal className="w-8 h-8 mx-auto text-brand-400/60" />
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                No posts in your joined forums yet
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Join additional specialized forums using the &ldquo;Organize&rdquo; button in the sidebar, or publish a research update to kick off discussion.
+              </p>
+            </>
+          ) : selectedTab === 'following' ? (
             <>
               <Users className="w-8 h-8 mx-auto text-brand-400/60" />
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -391,7 +452,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
                   ? 'No posts matched your search terms'
                   : selectedTab === 'all'
                   ? 'No research posts yet'
-                  : `No ${TABS_CONFIG.find((t) => t.id === selectedTab)?.label} yet`}
+                  : `No ${activeTabs.find((t) => t.id === selectedTab)?.label || 'posts'} yet`}
               </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {searchQuery
