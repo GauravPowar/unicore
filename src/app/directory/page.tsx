@@ -11,7 +11,7 @@ import type { Profile } from '@/types';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Researcher Directory | UniCore',
+  title: 'Researcher Directory | ResearchSetu',
   description: 'Discover verified faculty, postdocs, and PhD researchers across Indian institutions',
 };
 

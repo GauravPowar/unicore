@@ -1,5 +1,5 @@
 // ============================================================
-// /signup – UniCore Real & Mock Researcher Registration
+// /signup – ResearchSetu Real & Mock Researcher Registration
 // ============================================================
 'use client';
 
@@ -147,7 +147,7 @@ export default function SignupPage() {
             <AtSign className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Join the <span className="text-brand-500">UniCore</span> Network
+            Join the <span className="text-brand-500">ResearchSetu</span> Network
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Connect across Indian universities &amp; labs, find co-authors, and share experiments
@@ -171,7 +171,7 @@ export default function SignupPage() {
                 Verification Email Sent!
               </h2>
               <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
-                We sent a confirmation link to <strong className="text-slate-900 dark:text-white font-semibold">{email}</strong>. Please check your inbox and click the link to activate your UniCore account.
+                We sent a confirmation link to <strong className="text-slate-900 dark:text-white font-semibold">{email}</strong>. Please check your inbox and click the link to activate your ResearchSetu account.
               </p>
               {isAcademic && (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px]">

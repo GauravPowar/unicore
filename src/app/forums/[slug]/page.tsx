@@ -18,10 +18,10 @@ interface ForumPageProps {
 
 export async function generateMetadata({ params }: ForumPageProps): Promise<Metadata> {
   const { slug } = await params;
-  if (slug === 'team-updates') return { title: 'UniCore Team Updates & Releases | UniCore' };
+  if (slug === 'team-updates') return { title: 'ResearchSetu Team Updates & Releases | ResearchSetu' };
   const localForum = OFFICIAL_FORUMS.find((f) => f.slug === slug);
-  if (!localForum) return { title: 'Forum Not Found | UniCore' };
-  return { title: `${localForum.name} | UniCore`, description: localForum.description ?? undefined };
+  if (!localForum) return { title: 'Forum Not Found | ResearchSetu' };
+  return { title: `${localForum.name} | ResearchSetu`, description: localForum.description ?? undefined };
 }
 
 export default async function ForumPage({ params }: ForumPageProps) {

@@ -288,7 +288,7 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
 
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm(
-      'Are you sure you want to PERMANENTLY delete your UniCore account? This will erase your profile, publications, and all posts. This action cannot be reversed.'
+      'Are you sure you want to PERMANENTLY delete your ResearchSetu account? This will erase your profile, publications, and all posts. This action cannot be reversed.'
     );
     if (!confirmed) return;
 

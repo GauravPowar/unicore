@@ -1,5 +1,5 @@
 // ============================================================
-// UniCore – Native Desktop & Mobile Web Notifications
+// ResearchSetu – Native Desktop & Mobile Web Notifications
 // Delivers alerts for incoming direct messages, message requests,
 // upvotes, comments, and team announcements.
 // ============================================================
@@ -52,7 +52,7 @@ export function showWebNotification({
     const notif = new Notification(title, {
       body,
       icon,
-      tag: tag || 'unicore-alert',
+      tag: tag || 'researchsetu-alert',
       badge: '/favicon.ico',
     });
 

@@ -202,7 +202,7 @@ export function MessagesClient() {
                   body: newRow.content || 'Sent an attachment',
                   icon: sender?.avatar_url || '/favicon.ico',
                   url: `/messages?to=${newRow.sender_id}`,
-                  tag: `unicore-msg-${newRow.sender_id}`,
+                  tag: `researchsetu-msg-${newRow.sender_id}`,
                 });
               }
             }
@@ -255,6 +255,9 @@ export function MessagesClient() {
       // 2. Dispatch custom event so AppShell resets badge counter immediately
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
+          new CustomEvent('researchsetu:messages_read', { detail: { partnerId: activeConversation.id } })
+        );
+        window.dispatchEvent(
           new CustomEvent('unicore:messages_read', { detail: { partnerId: activeConversation.id } })
         );
       }
@@ -277,7 +280,7 @@ export function MessagesClient() {
   useEffect(() => {
     if (preset === 'coffee_chat' && activeConversation) {
       setInputValue(
-        `Hi ${activeConversation.full_name.split(' ')[0]}! I saw your research profile on UniCore and would love to connect for a quick 15-minute virtual coffee chat to explore collaborative ideas.`
+        `Hi ${activeConversation.full_name.split(' ')[0]}! I saw your research profile on ResearchSetu and would love to connect for a quick 15-minute virtual coffee chat to explore collaborative ideas.`
       );
     }
   }, [preset, activeConversation]);

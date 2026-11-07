@@ -92,7 +92,11 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
   useEffect(() => {
     const loadSaved = () => {
       try {
-        const stored = JSON.parse(localStorage.getItem('unicore_saved_posts') || '[]');
+        const raw =
+          localStorage.getItem('researchsetu_saved_posts') ||
+          localStorage.getItem('unicore_saved_posts') ||
+          '[]';
+        const stored = JSON.parse(raw);
         if (Array.isArray(stored)) {
           setSavedPostIds(stored);
         }
@@ -100,8 +104,12 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
     };
 
     loadSaved();
+    window.addEventListener('researchsetu_bookmarks_updated', loadSaved);
     window.addEventListener('unicore_bookmarks_updated', loadSaved);
-    return () => window.removeEventListener('unicore_bookmarks_updated', loadSaved);
+    return () => {
+      window.removeEventListener('researchsetu_bookmarks_updated', loadSaved);
+      window.removeEventListener('unicore_bookmarks_updated', loadSaved);
+    };
   }, []);
 
   // 3. Load Following IDs from user metadata or profile API
@@ -130,7 +138,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
     media_urls: string[];
   }) => {
     if (!user || !profile) {
-      alert('Please sign in to publish your post to the UniCore research community.');
+      alert('Please sign in to publish your post to the ResearchSetu research community.');
       window.location.href = '/login';
       return;
     }

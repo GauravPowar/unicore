@@ -1,5 +1,5 @@
 // ============================================================
-// UniCore – Shared TypeScript Types
+// ResearchSetu – Shared TypeScript Types
 // Mirrors the PostgreSQL schema in supabase/migrations/001_initial_schema.sql
 // ============================================================
 

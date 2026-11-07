@@ -1,5 +1,5 @@
 // ============================================================
-// UniCore – Client-Side Image Compression & Optimization
+// ResearchSetu – Client-Side Image Compression & Optimization
 // Converts raw smartphone photos (5-15MB) to high-efficiency WebP (~150-250KB)
 // Dramatically reduces Supabase storage usage and bandwidth by 90-95%
 // ============================================================

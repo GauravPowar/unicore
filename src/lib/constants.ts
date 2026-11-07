@@ -1,5 +1,5 @@
 // ============================================================
-// UniCore – Core Constants
+// ResearchSetu – Core Constants
 // ============================================================
 import type { Forum } from '@/types';
 
@@ -63,7 +63,7 @@ export const OFFICIAL_FORUMS: Forum[] = [
   {
     id: '77777777-7777-7777-7777-777777777777',
     slug: 'team-updates',
-    name: 'UniCore Team Updates',
+    name: 'ResearchSetu Team Updates',
     description: 'Official broadcast channel for new platform features, releases, and announcements.',
     category: 'Career & Academia',
     created_at: '2026-01-01T00:00:00Z',

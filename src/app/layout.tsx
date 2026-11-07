@@ -1,5 +1,5 @@
 // ============================================================
-// Root Layout — UniCore App Router
+// Root Layout — ResearchSetu App Router
 // ============================================================
 import type { Metadata } from 'next';
 import './globals.css';
@@ -9,8 +9,8 @@ import { AppShell } from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: {
-    default: 'UniCore — Indian Interdisciplinary Researcher Network',
-    template: '%s | UniCore',
+    default: 'ResearchSetu — Indian Interdisciplinary Researcher Network',
+    template: '%s | ResearchSetu',
   },
   description:
     'Connecting scientists, professors, and PhD scholars across India with LaTeX micro-thoughts, niche lab forums, and collaboration matching.',
@@ -27,16 +27,16 @@ export const metadata: Metadata = {
     'CSIR',
   ],
   openGraph: {
-    title: 'UniCore — Indian Interdisciplinary Researcher Network',
+    title: 'ResearchSetu — Indian Interdisciplinary Researcher Network',
     description:
       'Connect across disciplines, post LaTeX equations, troubleshoot wet/dry protocols, and find co-authors across India.',
-    siteName: 'UniCore',
+    siteName: 'ResearchSetu',
     type: 'website',
     locale: 'en_IN',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'UniCore — Indian Interdisciplinary Researcher Network',
+    title: 'ResearchSetu — Indian Interdisciplinary Researcher Network',
     description:
       'Connect across disciplines, post LaTeX equations, troubleshoot wet/dry protocols, and find co-authors across India.',
   },

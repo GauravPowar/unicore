@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       const authorName = (post.author as unknown as { full_name?: string })?.full_name ?? 'Researcher';
       const title = post.title || post.content_markdown?.slice(0, 60) || 'Research Post';
       return {
-        title: `${title} by ${authorName} | UniCore`,
+        title: `${title} by ${authorName} | ResearchSetu`,
         description: post.content_markdown?.slice(0, 160),
       };
     }
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
     // fallback
   }
 
-  return { title: 'Research Post | UniCore' };
+  return { title: 'Research Post | ResearchSetu' };
 }
 
 export default async function PostPage({ params }: PostPageProps) {

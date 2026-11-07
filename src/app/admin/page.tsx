@@ -1,5 +1,5 @@
 // ============================================================
-// /admin – UniCore Platform Administration Console
+// /admin – ResearchSetu Platform Administration Console
 // Decoupled from personal accounts. 100% Real Database Metrics.
 // ============================================================
 'use client';
@@ -305,7 +305,7 @@ export default function AdminDashboardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: broadcastTitle.trim() || 'UniCore Platform Announcement',
+          title: broadcastTitle.trim() || 'ResearchSetu Platform Announcement',
           content_markdown: broadcastContent.trim(),
         }),
       });
@@ -415,7 +415,7 @@ export default function AdminDashboardPage() {
               <div className="p-2 rounded-xl bg-brand-500/20 border border-brand-500/30 text-brand-300">
                 <Shield className="w-5 h-5" />
               </div>
-              <h1 className="text-xl font-bold tracking-tight">UniCore Admin Console</h1>
+              <h1 className="text-xl font-bold tracking-tight">ResearchSetu Admin Console</h1>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Live Node (BOM1)
@@ -1089,7 +1089,7 @@ export default function AdminDashboardPage() {
                 Publish Official Broadcast to /updates
               </h3>
               <p className="text-xs text-slate-500">
-                Announcements published here are highlighted across the platform as official UniCore updates.
+                Announcements published here are highlighted across the platform as official ResearchSetu updates.
               </p>
             </div>
 
@@ -1102,7 +1102,7 @@ export default function AdminDashboardPage() {
                   type="text"
                   value={broadcastTitle}
                   onChange={(e) => setBroadcastTitle(e.target.value)}
-                  placeholder="e.g. UniCore v1.3: Decoupled Admin Console & Enhanced Research Feed"
+                  placeholder="e.g. ResearchSetu v1.3: Decoupled Admin Console & Enhanced Research Feed"
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
@@ -1158,7 +1158,7 @@ export default function AdminDashboardPage() {
               { slug: 'protocol-troubleshooting', name: 'Protocol Troubleshooting', cat: 'Protocol Troubleshooting', desc: 'Western blots, PCR, TEM/SEM diagnostics' },
               { slug: 'materials-nanoscience', name: 'Materials & Nanoscience', cat: 'Niche Domain', desc: 'Synthesis, spectroscopy & XRD/AFM' },
               { slug: 'open-science-india', name: 'Open Science India', cat: 'Open Science', desc: 'Preprints, open datasets & reproducibility' },
-              { slug: 'team-updates', name: 'UniCore Team Updates', cat: 'Career & Academia', desc: 'Official broadcast channel' },
+              { slug: 'team-updates', name: 'ResearchSetu Team Updates', cat: 'Career & Academia', desc: 'Official broadcast channel' },
             ].map((f) => (
               <div
                 key={f.slug}

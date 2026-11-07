@@ -11,7 +11,7 @@ import type { Post } from '@/types';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Research Feed | UniCore',
+  title: 'Research Feed | ResearchSetu',
   description: 'Latest micro-thoughts, questions, and collab pitches from Indian researchers',
 };
 

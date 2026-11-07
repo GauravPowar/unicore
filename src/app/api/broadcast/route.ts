@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       .insert({
         author_id: authorId,
         forum_id: BROADCAST_FORUM_ID,
-        title: title?.trim() || 'UniCore Team Update',
+        title: title?.trim() || 'ResearchSetu Team Update',
         content_markdown: content_markdown.trim(),
         media_urls: media_urls || [],
         post_type: 'thought',

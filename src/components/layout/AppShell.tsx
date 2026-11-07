@@ -102,6 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       fetchCounters();
     };
     if (typeof window !== 'undefined') {
+      window.addEventListener('researchsetu:messages_read', handleReadEvent);
       window.addEventListener('unicore:messages_read', handleReadEvent);
     }
 
@@ -121,6 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       return () => {
         if (typeof window !== 'undefined') {
+          window.removeEventListener('researchsetu:messages_read', handleReadEvent);
           window.removeEventListener('unicore:messages_read', handleReadEvent);
         }
         supabase.removeChannel(channel);
@@ -128,6 +130,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     } catch {
       return () => {
         if (typeof window !== 'undefined') {
+          window.removeEventListener('researchsetu:messages_read', handleReadEvent);
           window.removeEventListener('unicore:messages_read', handleReadEvent);
         }
       };
@@ -160,8 +163,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <AtSign className="w-4 h-4 text-white" />
           </div>
           <div>
-            <span className="font-bold text-slate-900 dark:text-white text-lg">Uni</span>
-            <span className="font-bold text-brand-500 text-lg">Core</span>
+            <span className="font-bold text-slate-900 dark:text-white text-lg">Research</span>
+            <span className="font-bold text-brand-500 text-lg">Setu</span>
           </div>
           <button
             className="ml-auto lg:hidden text-slate-500"
@@ -256,7 +259,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       )}
                     </div>
                     <p className="text-[10px] text-slate-400 truncate">
-                      {currentUser.institution || 'UniCore Researcher'}
+                      {currentUser.institution || 'ResearchSetu Researcher'}
                     </p>
                   </div>
                 </Link>
@@ -305,7 +308,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="border-t border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 dark:text-slate-500">
-              🇮🇳 UniCore
+              🇮🇳 ResearchSetu
             </span>
             <span className="text-slate-300 dark:text-slate-700">·</span>
             <Link
@@ -334,7 +337,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-900 dark:text-white text-sm lg:hidden">
-                UniCore
+                ResearchSetu
               </span>
               <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-200/50 dark:border-brand-800/40">
                 🇮🇳 Indian Academic Beta

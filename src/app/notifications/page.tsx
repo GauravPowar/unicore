@@ -67,7 +67,9 @@ export default function NotificationsPage() {
   // Load read status from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('unicore_read_notifs');
+      const stored =
+        localStorage.getItem('researchsetu_read_notifs') ||
+        localStorage.getItem('unicore_read_notifs');
       if (stored) {
         setReadIds(JSON.parse(stored));
       }
@@ -260,7 +262,7 @@ export default function NotificationsPage() {
             items.push({
               id: `broadcast-${b.id}`,
               type: 'broadcast',
-              actorName: author?.full_name || 'UniCore Team',
+              actorName: author?.full_name || 'ResearchSetu Team',
               actorAvatar: author?.avatar_url,
               actorInstitution: 'Platform Administration',
               actorIsVerified: true,
@@ -311,6 +313,7 @@ export default function NotificationsPage() {
     const allIds = notifications.map((n) => n.id);
     setReadIds(allIds);
     try {
+      localStorage.setItem('researchsetu_read_notifs', JSON.stringify(allIds));
       localStorage.setItem('unicore_read_notifs', JSON.stringify(allIds));
     } catch {
       // ignore
@@ -409,7 +412,7 @@ export default function NotificationsPage() {
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {notifPermission === 'granted'
                   ? 'You will receive instant system notifications when peers send messages or requests.'
-                  : 'Get alerted even when UniCore is running in a background tab or on mobile.'}
+                  : 'Get alerted even when ResearchSetu is running in a background tab or on mobile.'}
               </p>
             </div>
           </div>

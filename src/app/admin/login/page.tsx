@@ -59,7 +59,7 @@ export default function AdminLoginPage() {
             <Shield className="w-7 h-7" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            UniCore Admin Console
+            ResearchSetu Admin Console
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Decoupled access portal for platform governance, verification & metrics
@@ -148,7 +148,7 @@ export default function AdminLoginPage() {
             href="/"
             className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
           >
-            ← Return to UniCore Research Feed
+            ← Return to ResearchSetu Research Feed
           </Link>
         </div>
       </div>

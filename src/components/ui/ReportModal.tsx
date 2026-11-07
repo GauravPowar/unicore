@@ -126,7 +126,7 @@ export function ReportModal({
               Report Submitted
             </h4>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Thank you for keeping UniCore safe and respectful. Our moderation team has been notified.
+              Thank you for keeping ResearchSetu safe and respectful. Our moderation team has been notified.
             </p>
           </div>
         ) : (

@@ -197,7 +197,7 @@ export function PostComposer({ onPost, defaultForumId }: PostComposerProps) {
     const modResult = screenContent(`${title} ${content}`);
     if (!modResult.isClean) {
       alert(
-        `Your post was flagged by UniCore's community safety filters:\n• ${modResult.reasons.join(
+        `Your post was flagged by ResearchSetu's community safety filters:\n• ${modResult.reasons.join(
           '\n• '
         )}\n\nPlease ensure your post follows academic community guidelines.`
       );

@@ -112,10 +112,10 @@ async function fetchProfileData(id: string): Promise<{ profile: Profile | null; 
 export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
   const { id } = await params;
   const { profile } = await fetchProfileData(id);
-  if (!profile) return { title: 'Researcher Not Found | UniCore' };
+  if (!profile) return { title: 'Researcher Not Found | ResearchSetu' };
   return {
-    title: `${profile.full_name} | UniCore`,
-    description: profile.bio ?? `${profile.full_name} on UniCore Indian Researcher Network`,
+    title: `${profile.full_name} | ResearchSetu`,
+    description: profile.bio ?? `${profile.full_name} on ResearchSetu Indian Researcher Network`,
   };
 }
 

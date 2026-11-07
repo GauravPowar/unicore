@@ -58,7 +58,11 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const saved: string[] = JSON.parse(localStorage.getItem('unicore_saved_posts') || '[]');
+        const raw =
+          localStorage.getItem('researchsetu_saved_posts') ||
+          localStorage.getItem('unicore_saved_posts') ||
+          '[]';
+        const saved: string[] = JSON.parse(raw);
         if (Array.isArray(saved) && saved.includes(currentPost.id)) {
           setIsBookmarked(true);
         }
@@ -72,13 +76,19 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
     setIsBookmarked(next);
     if (typeof window !== 'undefined') {
       try {
-        let saved: string[] = JSON.parse(localStorage.getItem('unicore_saved_posts') || '[]');
+        const raw =
+          localStorage.getItem('researchsetu_saved_posts') ||
+          localStorage.getItem('unicore_saved_posts') ||
+          '[]';
+        let saved: string[] = JSON.parse(raw);
         if (next) {
           if (!saved.includes(currentPost.id)) saved.push(currentPost.id);
         } else {
           saved = saved.filter((id) => id !== currentPost.id);
         }
+        localStorage.setItem('researchsetu_saved_posts', JSON.stringify(saved));
         localStorage.setItem('unicore_saved_posts', JSON.stringify(saved));
+        window.dispatchEvent(new CustomEvent('researchsetu_bookmarks_updated'));
         window.dispatchEvent(new CustomEvent('unicore_bookmarks_updated'));
       } catch {}
     }

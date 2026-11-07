@@ -1,5 +1,5 @@
 // ============================================================
-// UniCore – Validation Utilities
+// ResearchSetu – Validation Utilities
 // ============================================================
 
 /** Indian academic / research email domains */

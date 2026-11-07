@@ -1,5 +1,5 @@
 // ============================================================
-// UniCore – Decoupled Admin Authentication & Security
+// ResearchSetu – Decoupled Admin Authentication & Security
 // Provides passkey verification, session cookie management,
 // and role checking completely decoupled from personal accounts.
 // ============================================================
@@ -12,13 +12,14 @@ import { createAdminClient } from '@/lib/supabase/admin';
 // Configurable Admin Passkey (reads environment variable or defaults to secure standard)
 export const ADMIN_SECRET_KEY =
   process.env.ADMIN_SECRET_KEY ||
+  process.env.RESEARCHSETU_ADMIN_KEY ||
   process.env.UNICORE_ADMIN_KEY ||
-  'unicore-admin-2025';
+  'researchsetu-admin-2025';
 
-export const ADMIN_COOKIE_NAME = 'unicore_admin_session';
+export const ADMIN_COOKIE_NAME = 'researchsetu_admin_session';
 
 // Salt for HMAC signature
-const SESSION_SALT = process.env.ADMIN_SESSION_SALT || 'unicore_secret_salt_998811';
+const SESSION_SALT = process.env.ADMIN_SESSION_SALT || 'researchsetu_secret_salt_998811';
 
 /**
  * Creates a cryptographically signed admin session token
@@ -93,7 +94,9 @@ export async function verifyAdminRequest(req?: NextRequest): Promise<AdminAuthRe
   // 2. Check Cookie
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+    const token =
+      cookieStore.get(ADMIN_COOKIE_NAME)?.value ||
+      cookieStore.get('unicore_admin_session')?.value;
     if (token && verifyAdminToken(token)) {
       return { isAdmin: true, method: 'cookie' };
     }

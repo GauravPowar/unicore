@@ -22,13 +22,13 @@ interface ShareModalProps {
 
 export function ShareModal({
   url,
-  text = 'Explore UniCore: A new academic platform connecting researchers across India with LaTeX micro-thoughts, niche lab forums, and collaboration matching.',
+  text = 'Explore ResearchSetu: A new academic platform connecting researchers across India with LaTeX micro-thoughts, niche lab forums, and collaboration matching.',
 }: ShareModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const shareUrl =
-    url || (typeof window !== 'undefined' ? window.location.origin : 'https://unicore-phi.vercel.app');
+    url || (typeof window !== 'undefined' ? window.location.origin : 'https://unicore-five.vercel.app');
 
   const fullShareText = `${text}\n\n👉 Join & explore: ${shareUrl}`;
 
@@ -72,7 +72,7 @@ export function ShareModal({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Share UniCore
+                    Share ResearchSetu
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Invite colleagues, lab mates, and fellow researchers

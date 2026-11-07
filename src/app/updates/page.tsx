@@ -1,5 +1,5 @@
 // ============================================================
-// /updates – UniCore Official Broadcast Channel & Team Updates
+// /updates – ResearchSetu Official Broadcast Channel & Team Updates
 // Public broadcast feed for releases, new features, and changelogs.
 // Admin-only broadcasting and Admin Team permission management.
 // ============================================================
@@ -211,7 +211,7 @@ export default function UpdatesPage() {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            UniCore Team Updates &amp; Releases
+            ResearchSetu Team Updates &amp; Releases
           </h1>
 
           <p className="text-xs sm:text-sm text-brand-100 max-w-xl leading-relaxed">
@@ -271,14 +271,14 @@ export default function UpdatesPage() {
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-3">
                     <Avatar
-                      name={author?.full_name || 'UniCore Team'}
+                      name={author?.full_name || 'ResearchSetu Team'}
                       src={author?.avatar_url}
                       size="md"
                     />
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-sm text-slate-900 dark:text-white">
-                          {author?.full_name || 'UniCore Core Team'}
+                          {author?.full_name || 'ResearchSetu Core Team'}
                         </span>
                         <VerifiedBadge />
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
@@ -351,7 +351,7 @@ export default function UpdatesPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. UniCore v1.3: Realtime Protocol Sharing Released"
+                  placeholder="e.g. ResearchSetu v1.3: Realtime Protocol Sharing Released"
                   value={broadcastTitle}
                   onChange={(e) => setBroadcastTitle(e.target.value)}
                   className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"

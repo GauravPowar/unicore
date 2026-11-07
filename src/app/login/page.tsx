@@ -1,5 +1,5 @@
 // ============================================================
-// /login – UniCore Real & Mock Researcher Login
+// /login – ResearchSetu Real & Mock Researcher Login
 // ============================================================
 'use client';
 
@@ -70,7 +70,7 @@ export default function LoginPage() {
             <AtSign className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Welcome to <span className="text-brand-500">UniCore</span>
+            Welcome to <span className="text-brand-500">ResearchSetu</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Indian Interdisciplinary Researcher Network
@@ -150,7 +150,7 @@ export default function LoginPage() {
 
             <div className="text-center pt-3 border-t border-slate-100 dark:border-slate-800">
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                New to UniCore?{' '}
+                New to ResearchSetu?{' '}
                 <Link
                   href="/signup"
                   className="font-semibold text-brand-600 dark:text-brand-400 hover:underline"

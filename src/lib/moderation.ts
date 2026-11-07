@@ -1,5 +1,5 @@
 // ============================================================
-// UniCore – Automated Content Moderation & Abuse Screening
+// ResearchSetu – Automated Content Moderation & Abuse Screening
 // Protects Indian academic community against harassment,
 // phishing, spam flooding, and misconduct.
 // ============================================================

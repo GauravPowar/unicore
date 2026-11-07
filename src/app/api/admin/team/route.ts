@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
           email: u.email,
           full_name: prof?.full_name || u.user_metadata?.full_name || u.email?.split('@')[0],
           avatar_url: prof?.avatar_url || null,
-          institution: prof?.institution || 'UniCore Team',
+          institution: prof?.institution || 'ResearchSetu Team',
           department: prof?.department || null,
           isRootAdmin: false,
           role: 'Admin Team Member',
