@@ -28,7 +28,7 @@ export function ShareModal({
   const [copied, setCopied] = useState(false);
 
   const shareUrl =
-    url || (typeof window !== 'undefined' ? window.location.origin : 'https://unicore-five.vercel.app');
+    url || (typeof window !== 'undefined' ? window.location.origin : 'https://researchsetu.vercel.app');
 
   const fullShareText = `${text}\n\n👉 Join & explore: ${shareUrl}`;
 

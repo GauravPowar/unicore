@@ -78,7 +78,7 @@ export default function SignupPage() {
       const redirectOrigin =
         typeof window !== 'undefined'
           ? `${window.location.origin}`
-          : 'https://unicore-five.vercel.app';
+          : 'https://researchsetu.vercel.app';
 
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
