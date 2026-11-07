@@ -35,6 +35,7 @@ const PRIMARY_NAV = [
 ];
 
 const FORUM_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  'general': MessageSquare,
   'computational-biology': FlaskConical,
   'climate-earth-science': Globe,
   'grant-watch-india': TrendingUp,

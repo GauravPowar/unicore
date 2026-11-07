@@ -40,7 +40,11 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
           .order('created_at', { ascending: false });
 
         if (defaultForumId) {
-          query = query.eq('forum_id', defaultForumId);
+          if (defaultForumId === '00000000-0000-0000-0000-000000000000') {
+            query = query.or(`forum_id.is.null,forum_id.eq.${defaultForumId}`);
+          } else {
+            query = query.eq('forum_id', defaultForumId);
+          }
         }
 
         const { data, error } = await query;
@@ -92,7 +96,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
         .from('posts')
         .insert({
           author_id: user.id,
-          forum_id: data.forum_id || null,
+          forum_id: data.forum_id || '00000000-0000-0000-0000-000000000000',
           title: data.title || null,
           content_markdown: data.content_markdown,
           media_urls: data.media_urls,

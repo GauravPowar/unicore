@@ -5,6 +5,14 @@ import type { Forum } from '@/types';
 
 export const OFFICIAL_FORUMS: Forum[] = [
   {
+    id: '00000000-0000-0000-0000-000000000000',
+    slug: 'general',
+    name: 'General Discussion & Micro-Thoughts',
+    description: 'Interdisciplinary micro-thoughts, general queries, and community announcements across all disciplines.',
+    category: 'Career & Academia',
+    created_at: '2026-01-01T00:00:00Z',
+  },
+  {
     id: '11111111-1111-1111-1111-111111111111',
     slug: 'computational-biology',
     name: 'Computational Biology & Bioinformatics',

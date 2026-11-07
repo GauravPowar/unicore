@@ -42,11 +42,18 @@ export default async function ForumPage({ params }: ForumPageProps) {
     }
 
     if (forum) {
-      const { data: dbPosts } = await supabase
+      let query = supabase
         .from('posts')
         .select('*, author:profiles!posts_author_id_fkey(*), forum:forums(*)')
-        .eq('forum_id', forum.id)
         .order('created_at', { ascending: false });
+
+      if (forum.slug === 'general') {
+        query = query.or(`forum_id.is.null,forum_id.eq.${forum.id}`);
+      } else {
+        query = query.eq('forum_id', forum.id);
+      }
+
+      const { data: dbPosts } = await query;
 
       if (dbPosts) {
         posts = dbPosts as unknown as Post[];

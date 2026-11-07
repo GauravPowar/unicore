@@ -137,11 +137,10 @@ export function PostComposer({ onPost, defaultForumId }: PostComposerProps) {
         {/* Forum selector */}
         <div className="ml-auto relative shrink-0">
           <select
-            value={forumId}
+            value={forumId || '00000000-0000-0000-0000-000000000000'}
             onChange={(e) => setForumId(e.target.value)}
             className="appearance-none text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1.5 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
-            <option value="">General Feed</option>
             {OFFICIAL_FORUMS.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}

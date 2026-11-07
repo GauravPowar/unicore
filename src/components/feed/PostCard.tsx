@@ -33,6 +33,26 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
   const [showComments, setShowComments] = useState(defaultShowComments);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isTargeted, setIsTargeted] = useState(false);
+
+  // Auto-scroll and highlight when navigated to via URL hash
+  useEffect(() => {
+    const handleHash = () => {
+      if (typeof window !== 'undefined' && window.location.hash === `#${post.id}`) {
+        setIsTargeted(true);
+        const el = document.getElementById(post.id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else {
+        setIsTargeted(false);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [post.id]);
 
   // Check if current user has already upvoted this post
   useEffect(() => {
@@ -106,7 +126,12 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
   return (
     <article
       id={post.id}
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
+      className={cn(
+        'bg-white dark:bg-slate-900 border rounded-xl p-5 transition-all scroll-mt-24',
+        isTargeted
+          ? 'border-brand-500 ring-2 ring-brand-500/50 shadow-lg dark:ring-brand-400/40'
+          : 'border-slate-200 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-700'
+      )}
     >
       {/* Author row */}
       <div className="flex items-start gap-3 mb-3">
