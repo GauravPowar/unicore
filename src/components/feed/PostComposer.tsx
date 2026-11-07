@@ -19,10 +19,26 @@ import {
   X,
   ChevronDown,
   Upload,
+  BookOpen,
+  Sigma,
 } from 'lucide-react';
 
 const MAX_WORDS = 300;
 const POST_TYPES: PostType[] = ['thought', 'question', 'visual_abstract', 'collab_pitch'];
+
+const MATH_SYMBOLS = [
+  { label: 'a/b', insert: '$\\frac{a}{b}$ ' },
+  { label: '∑', insert: '$\\sum_{i=1}^{n}$ ' },
+  { label: '∫', insert: '$\\int_{a}^{b} f(x)\\,dx$ ' },
+  { label: '√x', insert: '$\\sqrt{x}$ ' },
+  { label: '∇', insert: '$\\nabla$ ' },
+  { label: 'α', insert: '$\\alpha$ ' },
+  { label: 'β', insert: '$\\beta$ ' },
+  { label: 'Δ', insert: '$\\Delta$ ' },
+  { label: '→', insert: '$\\rightarrow$ ' },
+  { label: '±', insert: '$\\pm$ ' },
+  { label: '≈', insert: '$\\approx$ ' },
+];
 
 interface PostComposerProps {
   onPost?: (data: {
