@@ -36,7 +36,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
         const supabase = createClient();
         let query = supabase
           .from('posts')
-          .select('*, author:profiles(*), forum:forums(*)')
+          .select('*, author:profiles!posts_author_id_fkey(*), forum:forums(*)')
           .order('created_at', { ascending: false });
 
         if (defaultForumId) {
@@ -98,7 +98,7 @@ export function FeedClient({ initialPosts, defaultForumId }: FeedClientProps) {
           media_urls: data.media_urls,
           post_type: data.post_type,
         })
-        .select('*, author:profiles(*), forum:forums(*)')
+        .select('*, author:profiles!posts_author_id_fkey(*), forum:forums(*)')
         .single();
 
       if (!error && dbPost) {

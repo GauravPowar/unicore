@@ -44,7 +44,7 @@ export default async function ForumPage({ params }: ForumPageProps) {
     if (forum) {
       const { data: dbPosts } = await supabase
         .from('posts')
-        .select('*, author:profiles(*), forum:forums(*)')
+        .select('*, author:profiles!posts_author_id_fkey(*), forum:forums(*)')
         .eq('forum_id', forum.id)
         .order('created_at', { ascending: false });
 

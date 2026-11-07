@@ -22,7 +22,7 @@ export default async function HomePage() {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('posts')
-      .select('*, author:profiles(*), forum:forums(*)')
+      .select('*, author:profiles!posts_author_id_fkey(*), forum:forums(*)')
       .order('created_at', { ascending: false });
 
     if (!error && data) {
