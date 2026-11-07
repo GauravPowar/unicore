@@ -158,12 +158,12 @@ CREATE TABLE public.post_upvotes (
 
 -- Trigger to sync upvotes_count
 CREATE OR REPLACE FUNCTION public.sync_upvotes_count()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     UPDATE public.posts SET upvotes_count = upvotes_count + 1 WHERE id = NEW.post_id;
   ELSIF TG_OP = 'DELETE' THEN
-    UPDATE public.posts SET upvotes_count = upvotes_count - 1 WHERE id = OLD.post_id;
+    UPDATE public.posts SET upvotes_count = GREATEST(0, upvotes_count - 1) WHERE id = OLD.post_id;
   END IF;
   RETURN NULL;
 END;

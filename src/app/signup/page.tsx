@@ -31,6 +31,7 @@ export default function SignupPage() {
   const [orcidId, setOrcidId] = useState('');
   const [institution, setInstitution] = useState('');
   const [department, setDepartment] = useState('');
+  const [bio, setBio] = useState('');
   const [password, setPassword] = useState('');
   const [collabStatus, setCollabStatus] = useState('open_to_collab');
 
@@ -90,6 +91,7 @@ export default function SignupPage() {
             department: department.trim() || null,
             orcid_id: orcidId.trim() || null,
             collab_status: collabStatus,
+            bio: bio.trim() || null,
           },
         },
       });
@@ -375,6 +377,23 @@ export default function SignupPage() {
                 <option value="offering_mentorship">Offering Mentorship</option>
                 <option value="busy">Currently Busy</option>
               </select>
+            </div>
+
+            {/* Custom Bio */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Research Focus &amp; Bio (Optional)
+                </label>
+                <span className="text-[10px] text-slate-400">Can be edited anytime</span>
+              </div>
+              <textarea
+                rows={3}
+                placeholder="e.g. PhD scholar working on microfluidics and single-cell RNA sequencing at IISc..."
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed"
+              />
             </div>
 
             {/* Password */}
