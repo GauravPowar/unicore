@@ -1,7 +1,9 @@
 // ============================================================
 // Avatar – researcher profile picture with fallback initials
 // ============================================================
-import Image from 'next/image';
+'use client';
+
+import { useState } from 'react';
 import { getInitials, getAvatarColor, cn } from '@/lib/utils';
 
 interface AvatarProps {
@@ -22,17 +24,17 @@ export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
   const { container, text } = SIZE_MAP[size];
   const initials = getInitials(name);
   const colorClass = getAvatarColor(name);
+  const [imageError, setImageError] = useState(false);
 
-  if (src) {
+  if (src && !imageError) {
     return (
-      <div className={cn('relative rounded-full overflow-hidden shrink-0', container, className)}>
-        <Image
+      <div className={cn('relative rounded-full overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-800', container, className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={src}
           alt={name}
-          fill
-          className="object-cover"
-          sizes="80px"
-          unoptimized={src.includes('dicebear.com')}
+          className="w-full h-full object-cover"
+          onError={() => setImageError(true)}
         />
       </div>
     );

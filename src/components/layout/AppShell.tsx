@@ -4,7 +4,7 @@
 // ============================================================
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   AtSign,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -27,6 +28,8 @@ import { ShareModal } from '@/components/ui/ShareModal';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { OFFICIAL_FORUMS } from '@/lib/constants';
+import { CreateForumModal } from '@/components/forums/CreateForumModal';
+import type { Forum } from '@/types';
 
 const PRIMARY_NAV = [
   { href: '/', label: 'Feed', icon: Home },
@@ -47,8 +50,21 @@ const FORUM_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [createForumOpen, setCreateForumOpen] = useState(false);
+  const [forums, setForums] = useState<Forum[]>(OFFICIAL_FORUMS);
   const { profile, signOut } = useAuth();
   const currentUser = profile;
+
+  useEffect(() => {
+    fetch('/api/forums')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.forums?.length) {
+          setForums(d.forums);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="flex min-h-screen">
@@ -107,13 +123,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
 
           {/* Forums section */}
-          <div className="pt-4 pb-1 px-3">
+          <div className="pt-4 pb-1 px-3 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Forums
             </p>
+            <button
+              onClick={() => setCreateForumOpen(true)}
+              className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 flex items-center gap-1 font-medium px-1.5 py-0.5 rounded hover:bg-brand-50 dark:hover:bg-brand-950/40 transition-colors"
+              title="Create new specialized forum"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New
+            </button>
           </div>
 
-          {OFFICIAL_FORUMS.map((forum) => {
+          {forums.map((forum) => {
             const Icon = FORUM_ICONS[forum.slug] ?? BookOpen;
             const href = `/forums/${forum.slug}`;
             return (
@@ -239,6 +263,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      <CreateForumModal
+        isOpen={createForumOpen}
+        onClose={() => setCreateForumOpen(false)}
+        onForumCreated={(newForum) => {
+          setForums((prev) => [...prev.filter((f) => f.id !== newForum.id), newForum]);
+        }}
+      />
     </div>
   );
 }

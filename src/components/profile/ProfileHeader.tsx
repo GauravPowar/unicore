@@ -1,10 +1,11 @@
 // ============================================================
-// ProfileHeader – Researcher profile header with custom bio editor
+// ProfileHeader – Researcher profile header with custom bio editor,
+// avatar upload, username handle, and account deletion
 // Client Component
 // ============================================================
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
@@ -24,6 +25,10 @@ import {
   Check,
   X,
   Coffee,
+  Camera,
+  Trash2,
+  Upload,
+  AtSign,
 } from 'lucide-react';
 
 interface ProfileHeaderProps {
@@ -32,14 +37,21 @@ interface ProfileHeaderProps {
 
 export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const isOwner = user?.id === initialProfile.id;
 
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit form state
+  const [username, setUsername] = useState(
+    initialProfile.username || (user?.user_metadata?.username as string) || ''
+  );
+  const [avatarUrl, setAvatarUrl] = useState(initialProfile.avatar_url || '');
   const [bio, setBio] = useState(initialProfile.bio || '');
   const [institution, setInstitution] = useState(initialProfile.institution || '');
   const [department, setDepartment] = useState(initialProfile.department || '');
@@ -51,6 +63,36 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
   const [skillsNeededInput, setSkillsNeededInput] = useState(
     initialProfile.skills_needed?.join(', ') || ''
   );
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          setAvatarUrl(data.url);
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to upload image');
+      }
+    } catch {
+      alert('Error uploading avatar image');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -66,8 +108,11 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const updates = {
+    const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+    const updates: Record<string, unknown> = {
       bio: bio.trim() || null,
+      avatar_url: avatarUrl.trim() || null,
       institution: institution.trim() || null,
       department: department.trim() || null,
       city_state: cityState.trim() || null,
@@ -79,6 +124,15 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
 
     try {
       const supabase = createClient();
+
+      // 1. Update user metadata for username
+      if (cleanUsername) {
+        await supabase.auth.updateUser({
+          data: { username: cleanUsername },
+        });
+      }
+
+      // 2. Update profiles table
       const { error } = await supabase
         .from('profiles')
         .update(updates)
@@ -88,7 +142,8 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
         setProfile((prev) => ({
           ...prev,
           ...updates,
-        }));
+          username: cleanUsername || prev.username,
+        } as Profile));
         setIsEditing(false);
         router.refresh();
       } else {
@@ -102,10 +157,46 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to PERMANENTLY delete your UniCore account? This will erase your profile, publications, and all posts. This action cannot be reversed.'
+    );
+    if (!confirmed) return;
+
+    setIsDeletingAccount(true);
+    try {
+      const res = await fetch('/api/account', { method: 'DELETE' });
+      if (res.ok) {
+        await signOut();
+        window.location.href = '/';
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete account');
+      }
+    } catch {
+      alert('Network error while requesting account deletion.');
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  const displayUsername = profile.username || (user?.id === profile.id ? user?.user_metadata?.username : null);
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
       <div className="flex flex-col sm:flex-row items-start gap-5">
-        <Avatar name={profile.full_name} src={profile.avatar_url} size="xl" />
+        <div className="relative group">
+          <Avatar name={profile.full_name} src={profile.avatar_url} size="xl" />
+          {isOwner && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-brand-500 text-white shadow-md hover:bg-brand-600 transition-colors"
+              title="Change profile picture"
+            >
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -114,6 +205,12 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
             </h1>
             {profile.is_verified_researcher && <VerifiedBadge />}
           </div>
+
+          {displayUsername && (
+            <p className="text-xs font-mono text-brand-600 dark:text-brand-400 mt-0.5">
+              @{displayUsername}
+            </p>
+          )}
 
           {profile.institution && (
             <p className="flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mt-1">
@@ -202,6 +299,79 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
             <Edit3 className="w-4 h-4 text-brand-500" /> Customize Your Researcher Bio &amp; Profile
           </h3>
 
+          {/* Profile Picture Upload */}
+          <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center gap-4">
+            <Avatar name={profile.full_name} src={avatarUrl} size="lg" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Profile Picture</p>
+              <p className="text-[11px] text-slate-500">JPG, PNG or GIF up to 5MB.</p>
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  isLoading={isUploadingAvatar}
+                  className="text-xs gap-1.5"
+                >
+                  <Upload className="w-3.5 h-3.5" /> Upload Photo
+                </Button>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUrl('')}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Username & Collab Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Permanent Handle (@username)
+              </label>
+              <div className="relative">
+                <AtSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  placeholder="e.g. gaurav_powar"
+                  maxLength={24}
+                  className="w-full text-xs pl-8 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Collaboration Status
+              </label>
+              <select
+                value={collabStatus}
+                onChange={(e) => setCollabStatus(e.target.value as CollabStatus)}
+                className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100"
+              >
+                <option value="open_to_collab">Open to Collaboration</option>
+                <option value="offering_mentorship">Offering Mentorship</option>
+                <option value="looking_for_coauthor">Looking for Co-Authors</option>
+                <option value="busy">Currently Busy</option>
+              </select>
+            </div>
+          </div>
+
           {/* Bio Textarea */}
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -244,35 +414,18 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
             </div>
           </div>
 
-          {/* City / State & Collab Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                City, State
-              </label>
-              <input
-                type="text"
-                value={cityState}
-                onChange={(e) => setCityState(e.target.value)}
-                placeholder="e.g. Berhampur, Odisha or Bengaluru, Karnataka"
-                className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Collaboration Status
-              </label>
-              <select
-                value={collabStatus}
-                onChange={(e) => setCollabStatus(e.target.value as CollabStatus)}
-                className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100"
-              >
-                <option value="open_to_collab">Open to Collaboration</option>
-                <option value="offering_mentorship">Offering Mentorship</option>
-                <option value="looking_for_coauthor">Looking for Co-Authors</option>
-                <option value="busy">Currently Busy</option>
-              </select>
-            </div>
+          {/* City / State */}
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              City, State
+            </label>
+            <input
+              type="text"
+              value={cityState}
+              onChange={(e) => setCityState(e.target.value)}
+              placeholder="e.g. Berhampur, Odisha or Bengaluru, Karnataka"
+              className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100"
+            />
           </div>
 
           {/* Skills Offered & Needed */}
@@ -303,7 +456,29 @@ export function ProfileHeader({ initialProfile }: ProfileHeaderProps) {
             </div>
           </div>
 
-          {/* Buttons */}
+          {/* Danger Zone: Delete Account */}
+          <div className="pt-4 mt-2 border-t border-red-200 dark:border-red-900/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-lg">
+              <div>
+                <p className="text-xs font-semibold text-red-600 dark:text-red-400">Permanently Delete Account</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Deletes your researcher profile, posts, comments, and messages permanently.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleDeleteAccount}
+                isLoading={isDeletingAccount}
+                className="text-xs text-red-600 hover:text-red-700 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Account
+              </Button>
+            </div>
+          </div>
+
+          {/* Save & Cancel Buttons */}
           <div className="flex justify-end gap-2 pt-2">
             <Button
               variant="secondary"

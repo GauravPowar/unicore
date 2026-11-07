@@ -11,25 +11,19 @@ const BUCKET_NAME = 'post-media';
  */
 export async function uploadPostMedia(file: File): Promise<string> {
   try {
-    const supabase = createClient();
-    const fileExt = file.name.split('.').pop()?.toLowerCase() ?? 'png';
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-    const filePath = `uploads/${fileName}`;
+    const formData = new FormData();
+    formData.append('file', file);
 
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
 
-    if (uploadError) {
-      console.warn('Storage upload warning, using preview URL:', uploadError.message);
-      return URL.createObjectURL(file);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.url) return data.url;
     }
-
-    const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-    return data.publicUrl;
+    return URL.createObjectURL(file);
   } catch (err) {
     console.error('Storage error:', err);
     return URL.createObjectURL(file);

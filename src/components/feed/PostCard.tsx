@@ -117,7 +117,8 @@ export function PostCard({ post, compact = false, defaultShowComments = false }:
 
   const handleShare = () => {
     if (typeof window !== 'undefined') {
-      navigator.clipboard?.writeText(window.location.origin + `/forums/${post.forum?.slug ?? 'general'}#${post.id}`);
+      const shortUrl = `${window.location.origin}/p/${post.id.slice(0, 8)}`;
+      navigator.clipboard?.writeText(shortUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

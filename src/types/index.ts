@@ -23,6 +23,7 @@ export type ForumCategory =
 
 export interface Profile {
   id: string;
+  username?: string | null;
   full_name: string;
   institution: string | null;
   department: string | null;

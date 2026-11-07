@@ -4,14 +4,14 @@
 // ============================================================
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { MarkdownContent } from '@/components/feed/MarkdownContent';
 import { wordCount } from '@/lib/validators';
 import { POST_TYPE_CONFIG } from '@/lib/utils';
 import { OFFICIAL_FORUMS } from '@/lib/constants';
 import { uploadPostMedia } from '@/lib/supabase/storage';
-import type { PostType } from '@/types';
+import type { PostType, Forum } from '@/types';
 import {
   Eye,
   Edit3,
@@ -40,12 +40,22 @@ export function PostComposer({ onPost, defaultForumId }: PostComposerProps) {
   const [title, setTitle] = useState('');
   const [postType, setPostType] = useState<PostType>('thought');
   const [forumId, setForumId] = useState(defaultForumId ?? '');
+  const [forums, setForums] = useState<Forum[]>(OFFICIAL_FORUMS);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [previewMode, setPreviewMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch('/api/forums')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.forums?.length) setForums(d.forums);
+      })
+      .catch(() => {});
+  }, []);
 
   const words = wordCount(content);
   const overLimit = words > MAX_WORDS;
@@ -141,7 +151,7 @@ export function PostComposer({ onPost, defaultForumId }: PostComposerProps) {
             onChange={(e) => setForumId(e.target.value)}
             className="appearance-none text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1.5 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
-            {OFFICIAL_FORUMS.map((f) => (
+            {forums.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
               </option>
